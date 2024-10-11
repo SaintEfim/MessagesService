@@ -1,0 +1,11 @@
+Server:
+  Type: "tcp"
+  Port: ":9000"
+EnvironmentVariables:
+  Environment: "development"
+Logs:
+  Path: ""
+  Level: info
+  MaxAge: 1
+  MaxBackups: 4
+
