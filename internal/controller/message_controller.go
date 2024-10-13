@@ -1,24 +1,26 @@
 package controller
 
 import (
-	"MessageService/internal/models/interfaces"
 	"bufio"
 	"context"
-	"go.uber.org/zap"
 	"net"
+
+	"MessagesService/internal/models/interfaces"
+
+	"go.uber.org/zap"
 )
 
-type Controller struct {
+type MessageController struct {
 	logger *zap.Logger
 }
 
-func NewController(logger *zap.Logger) interfaces.Controller {
-	return &Controller{
+func NewMessageController(logger *zap.Logger) interfaces.MessageController {
+	return &MessageController{
 		logger: logger,
 	}
 }
 
-func (c *Controller) Connection(ctx context.Context, conn net.Conn) error {
+func (c *MessageController) MessageProcessRequest(ctx context.Context, conn net.Conn) error {
 	var err error
 	defer func(conn net.Conn) {
 		err = conn.Close()

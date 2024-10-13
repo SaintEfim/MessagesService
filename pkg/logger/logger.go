@@ -3,7 +3,7 @@ package logger
 import (
 	"os"
 
-	"MessageService/config"
+	"MessagesService/config"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"

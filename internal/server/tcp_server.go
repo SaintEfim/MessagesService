@@ -4,7 +4,8 @@ import (
 	"context"
 	"net"
 
-	"MessageService/config"
+	"MessagesService/config"
+
 	"go.uber.org/zap"
 )
 

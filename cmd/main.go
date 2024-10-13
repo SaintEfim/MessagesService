@@ -3,12 +3,12 @@ package main
 import (
 	"context"
 
-	"MessageService/config"
-	"MessageService/internal/controller"
-	"MessageService/internal/handler"
-	"MessageService/internal/models/interfaces"
-	"MessageService/internal/server"
-	"MessageService/pkg/logger"
+	"MessagesService/config"
+	"MessagesService/internal/controller"
+	"MessagesService/internal/handler"
+	"MessagesService/internal/models/interfaces"
+	"MessagesService/internal/server"
+	"MessagesService/pkg/logger"
 
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -60,8 +60,8 @@ func main() {
 			logger.NewLogger,
 			server.NewTCPServer,
 			server.NewServer,
-			handler.NewHandler,
-			controller.NewController),
+			handler.NewMessageHandler,
+			controller.NewMessageController),
 		fx.Invoke(registerServer),
 	).Run()
 }

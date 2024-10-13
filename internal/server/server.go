@@ -4,8 +4,8 @@ import (
 	"context"
 	"net"
 
-	"MessageService/config"
-	"MessageService/internal/models/interfaces"
+	"MessagesService/config"
+	"MessagesService/internal/models/interfaces"
 
 	"go.uber.org/zap"
 )
@@ -13,11 +13,11 @@ import (
 type Server struct {
 	listener net.Listener
 	cfg      *config.Config
-	handler  interfaces.Handler
+	handler  interfaces.MessageHandler
 	logger   *zap.Logger
 }
 
-func NewServer(listener net.Listener, cfg *config.Config, handler interfaces.Handler, logger *zap.Logger) interfaces.Server {
+func NewServer(listener net.Listener, cfg *config.Config, handler interfaces.MessageHandler, logger *zap.Logger) interfaces.Server {
 	return &Server{
 		listener: listener,
 		cfg:      cfg,
@@ -37,7 +37,9 @@ func (s *Server) Run(ctx context.Context) error {
 		s.logger.Info("Connected with", zap.String("address", conn.RemoteAddr().String()))
 
 		go func() {
-			err = s.handler.HandleConnection(ctx, conn)
+			if err := s.handler.MessageHandleRequest(ctx, conn); err != nil {
+				s.logger.Error("Error handling request:", zap.Error(err))
+			}
 		}()
 
 		if err != nil {
@@ -47,8 +49,7 @@ func (s *Server) Run(ctx context.Context) error {
 }
 
 func (s *Server) Stop(ctx context.Context) error {
-	err := s.listener.Close()
-	if err != nil {
+	if err := s.listener.Close(); err != nil {
 		s.logger.Error("Error closing:", zap.Error(err))
 	}
 	return nil
