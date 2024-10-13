@@ -28,8 +28,7 @@ func NewTCPServer(listener net.Listener, cfg *config.Config, handler interfaces.
 
 func (s *TCPServer) AcceptLoop(ctx context.Context) error {
 	for {
-		var err error
-		conn, err := s.listener.Accept()
+		var conn, err = s.listener.Accept()
 		if err != nil {
 			s.logger.Error("Error accepting:", zap.Error(err))
 		}
