@@ -33,7 +33,6 @@ func (s *TCPServer) AcceptLoop(ctx context.Context) error {
 		if err != nil {
 			s.logger.Error("Error accepting:", zap.Error(err))
 		}
-
 		s.logger.Info("Connected with", zap.String("address", conn.RemoteAddr().String()))
 
 		go func() {
