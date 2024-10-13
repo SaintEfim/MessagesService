@@ -14,14 +14,14 @@ import (
 	"go.uber.org/zap"
 )
 
-func registerServer(lifecycle fx.Lifecycle, srv interfaces.Server, logger *zap.Logger) {
+func registerServer(lifecycle fx.Lifecycle, srv interfaces.TCPServer, logger *zap.Logger) {
 	lifecycle.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			logger.Info("Starting server...")
 
 			var err error
 			go func() {
-				err = srv.Run(ctx)
+				err = srv.AcceptLoop(ctx)
 				if err != nil {
 					logger.Error("Server failed to start", zap.Error(err))
 				} else {
@@ -37,7 +37,7 @@ func registerServer(lifecycle fx.Lifecycle, srv interfaces.Server, logger *zap.L
 		OnStop: func(ctx context.Context) error {
 			logger.Info("Stopping server...")
 
-			if err := srv.Stop(ctx); err != nil {
+			if err := srv.RefuseLoop(ctx); err != nil {
 				logger.Error("Failed to stop server", zap.Error(err))
 				return err
 			}
@@ -58,8 +58,8 @@ func main() {
 		}),
 		fx.Provide(
 			logger.NewLogger,
+			server.NewTCPListener,
 			server.NewTCPServer,
-			server.NewServer,
 			handler.NewMessageHandler,
 			controller.NewMessageController),
 		fx.Invoke(registerServer),
