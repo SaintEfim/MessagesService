@@ -5,9 +5,14 @@ import (
 )
 
 type Config struct {
-	EnvironmentVariables EnvironmentVariables `yaml:"EnvironmentVariables"`
-	Server               Server               `yaml:"Server"`
-	Logs                 Logs                 `yaml:"Logs"`
+	AuthenticationConfiguration AuthenticationConfiguration `yaml:"AuthenticationConfiguration"`
+	EnvironmentVariables        EnvironmentVariables        `yaml:"EnvironmentVariables"`
+	Server                      Server                      `yaml:"Server"`
+	Logs                        Logs                        `yaml:"Logs"`
+}
+
+type AuthenticationConfiguration struct {
+	AccessSecretKey string `yaml:"AccessSecretKey"`
 }
 
 type EnvironmentVariables struct {
