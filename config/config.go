@@ -2,12 +2,14 @@ package config
 
 import (
 	"github.com/spf13/viper"
+	"time"
 )
 
 type Config struct {
 	AuthenticationConfiguration AuthenticationConfiguration `yaml:"AuthenticationConfiguration"`
 	EnvironmentVariables        EnvironmentVariables        `yaml:"EnvironmentVariables"`
 	Server                      Server                      `yaml:"Server"`
+	Redis                       Redis                       `yaml:"Redis"`
 	Logs                        Logs                        `yaml:"Logs"`
 }
 
@@ -22,6 +24,13 @@ type EnvironmentVariables struct {
 type Server struct {
 	Type string `yaml:"Type"`
 	Port string `yaml:"Port"`
+}
+
+type Redis struct {
+	Address    string        `yaml:"Address"`
+	Password   string        `yaml:"Password"`
+	Db         int           `yaml:"Db"`
+	Expiration time.Duration `yaml:"Expiration"`
 }
 
 type Logs struct {

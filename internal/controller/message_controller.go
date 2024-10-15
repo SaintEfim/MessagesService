@@ -9,6 +9,7 @@ import (
 	"MessagesService/config"
 	"MessagesService/internal/models/entity"
 	"MessagesService/internal/models/interfaces"
+	"MessagesService/internal/repository/redis"
 
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
@@ -16,16 +17,16 @@ import (
 )
 
 type MessageController struct {
-	connections map[uuid.UUID]net.Conn
-	logger      *zap.Logger
-	cfg         *config.Config
+	logger *zap.Logger
+	cfg    *config.Config
+	repo   *redis.RedisRepository
 }
 
-func NewMessageController(logger *zap.Logger, cfg *config.Config) interfaces.MessageController {
+func NewMessageController(logger *zap.Logger, cfg *config.Config, repo *redis.RedisRepository) interfaces.MessageController {
 	return &MessageController{
-		connections: make(map[uuid.UUID]net.Conn),
-		logger:      logger,
-		cfg:         cfg,
+		logger: logger,
+		cfg:    cfg,
+		repo:   repo,
 	}
 }
 
@@ -38,9 +39,14 @@ func (c *MessageController) MessageProcessRequest(ctx context.Context, conn net.
 
 	scanner := bufio.NewScanner(conn)
 
-	_, err := c.readTCPRequest(ctx, scanner, conn)
+	msg, err := c.readTCPRequest(ctx, scanner, conn)
 	if err != nil {
 		c.logger.Error("Error processing TCP request:", zap.Error(err))
+		return err
+	}
+
+	err = c.writeTCPRequest(ctx, msg)
+	if err != nil {
 		return err
 	}
 
@@ -59,36 +65,70 @@ func (c *MessageController) readTCPRequest(ctx context.Context, scanner *bufio.S
 
 		c.logger.Info("Received raw message", zap.String("clientMessage", clientMessage))
 
-		err = json.Unmarshal([]byte(clientMessage), &msg)
-		if err != nil {
+		if err = json.Unmarshal([]byte(clientMessage), &msg); err != nil {
 			c.logger.Error("Error unmarshalling JSON", zap.Error(err))
 			if _, err = conn.Write([]byte("Invalid JSON format.\n")); err != nil {
 				c.logger.Error("Error sending response to client:", zap.Error(err))
-				return msg, err
 			}
 
 			continue
 		}
 
-		userId, err = c.parseJWTToken(ctx, msg.UserCredential)
-
-		if err != nil {
+		if userId, err = c.parseJWTToken(ctx, msg.UserCredential); err != nil {
 			c.logger.Error("Error parsing user ID", zap.Error(err))
 			return msg, err
 		}
 
-		c.connections[userId] = conn
+		if err = c.repo.Set(ctx, userId.String(), conn.RemoteAddr().String()); err != nil {
+			c.logger.Error("Error sending response to client:", zap.Error(err))
+			return msg, err
+		}
+
 		c.logger.Info("Connection saved", zap.String("user_id", userId.String()))
 
 		break
 	}
 
-	if err := scanner.Err(); err != nil {
+	if err = scanner.Err(); err != nil {
 		c.logger.Error("Error reading from connection", zap.Error(err))
 		return msg, err
 	}
 
 	return msg, nil
+}
+
+func (c *MessageController) writeTCPRequest(ctx context.Context, message entity.TCPRequest) error {
+	colleagueAddr, err := c.repo.Get(ctx, message.UserCredential.ColleagueId.String())
+	if err != nil {
+		c.logger.Error("Error getting colleague connection address:", zap.Error(err))
+		return err
+	}
+
+	colleagueConn, err := net.Dial("tcp", colleagueAddr.(string))
+	if err != nil {
+		c.logger.Error("Error connecting to colleague:", zap.Error(err))
+		return err
+	}
+	defer func() {
+		if err := colleagueConn.Close(); err != nil {
+			c.logger.Error("Error closing colleague connection:", zap.Error(err))
+		}
+	}()
+
+	messageJSON, err := json.Marshal(message)
+	if err != nil {
+		c.logger.Error("Error marshalling message to JSON:", zap.Error(err))
+		return err
+	}
+
+	_, err = colleagueConn.Write(messageJSON)
+	if err != nil {
+		c.logger.Error("Error sending message to colleague:", zap.Error(err))
+		return err
+	}
+
+	c.logger.Info("Message sent to colleague", zap.String("colleague_addr", colleagueAddr.(string)))
+	return nil
 }
 
 func (c *MessageController) parseJWTToken(ctx context.Context, user entity.UserCredential) (uuid.UUID, error) {
@@ -107,7 +147,7 @@ func (c *MessageController) parseJWTToken(ctx context.Context, user entity.UserC
 		c.logger.Error("Error parsing JWT token", zap.Error(err))
 	}
 
-	userIdStr, ok := claims["user_id"].(string)
+	userIdStr, ok := claims["nameid"].(string)
 	if !ok {
 		c.logger.Error("user_id not found in token claims or invalid type")
 		return uuid.Nil, err

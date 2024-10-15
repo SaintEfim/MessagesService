@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
+	"time"
 
 	"MessagesService/config"
 	"MessagesService/internal/controller"
 	"MessagesService/internal/handler"
 	"MessagesService/internal/models/interfaces"
+	"MessagesService/internal/repository/redis"
 	"MessagesService/internal/server"
 	"MessagesService/pkg/logger"
 
@@ -51,13 +53,17 @@ func registerServer(lifecycle fx.Lifecycle, srv interfaces.TCPServer, logger *za
 func main() {
 	fx.New(
 		fx.Provide(func() context.Context {
-			return context.Background()
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Hour)
+			defer cancel()
+			return ctx
 		}),
 		fx.Provide(func() (*config.Config, error) {
 			return config.ReadConfig("config", "yaml", "./config")
 		}),
 		fx.Provide(
 			logger.NewLogger,
+			redis.NewRedisClient,
+			redis.NewRedisRepository,
 			server.NewTCPListener,
 			server.NewTCPServer,
 			handler.NewMessageHandler,
