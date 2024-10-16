@@ -137,6 +137,7 @@ func (c *MessageController) parseJWTToken(ctx context.Context, user entity.UserC
 	})
 	if err != nil {
 		c.logger.Error("Error parsing JWT token", zap.Error(err))
+		return uuid.Nil, err
 	}
 
 	userIdStr, ok := claims[keyForId].(string)

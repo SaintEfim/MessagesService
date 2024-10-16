@@ -1,13 +1,14 @@
 package redis
 
 import (
-	"MessagesService/config"
-	"MessagesService/internal/models/interfaces"
 	"context"
-	"go.uber.org/zap"
 	"time"
 
+	"MessagesService/config"
+	"MessagesService/internal/models/interfaces"
+
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
 )
 
 type RedisRepository struct {
@@ -40,7 +41,6 @@ func (repo *RedisRepository) Set(ctx context.Context, key string, value string) 
 	if err := repo.client.Set(ctxNew, key, value, repo.cfg.Redis.Expiration*time.Second).Err(); err != nil {
 		return err
 	}
-
 	return nil
 }
 

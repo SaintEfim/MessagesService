@@ -14,14 +14,14 @@ import (
 	"go.uber.org/zap"
 )
 
-func registerServer(lifecycle fx.Lifecycle, srv interfaces.TCPServer, logger *zap.Logger) {
+func registerServer(lifecycle fx.Lifecycle, mainCtx context.Context, srv interfaces.TCPServer, logger *zap.Logger) {
 	lifecycle.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			logger.Info("Starting server...")
 
 			var err error
 			go func() {
-				err = srv.AcceptLoop(ctx)
+				err = srv.AcceptLoop(mainCtx)
 				if err != nil {
 					logger.Error("Server failed to start", zap.Error(err))
 				} else {
@@ -37,7 +37,7 @@ func registerServer(lifecycle fx.Lifecycle, srv interfaces.TCPServer, logger *za
 		OnStop: func(ctx context.Context) error {
 			logger.Info("Stopping server...")
 
-			if err := srv.RefuseLoop(ctx); err != nil {
+			if err := srv.RefuseLoop(mainCtx); err != nil {
 				logger.Error("Failed to stop server", zap.Error(err))
 				return err
 			}
@@ -58,6 +58,7 @@ func main() {
 		}),
 		fx.Provide(
 			logger.NewLogger,
+			redis.NewRedisClient,
 			redis.NewRedisRepository,
 			server.NewTCPListener,
 			server.NewTCPServer,
