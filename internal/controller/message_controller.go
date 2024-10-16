@@ -43,8 +43,12 @@ func (c *MessageController) MessageProcessRequest(ctx context.Context, conn net.
 		return err
 	}
 
-	err = c.writeTCPRequest(ctx, msg)
-	if err != nil {
+	if len(msg.Message) == 0 {
+		c.logger.Info("Received empty message, skipping write.")
+		return nil
+	}
+
+	if err = c.writeTCPRequest(ctx, msg); err != nil {
 		return err
 	}
 
