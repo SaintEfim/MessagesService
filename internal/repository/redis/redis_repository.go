@@ -8,7 +8,6 @@ import (
 	"MessagesService/internal/models/interfaces"
 
 	"github.com/redis/go-redis/v9"
-	"go.uber.org/zap"
 )
 
 type RedisRepository struct {
@@ -16,7 +15,7 @@ type RedisRepository struct {
 	cfg    *config.Config
 }
 
-func NewRedisClient(ctx context.Context, cfg *config.Config, logger *zap.Logger) *redis.Client {
+func NewRedisClient(ctx context.Context, cfg *config.Config) *redis.Client {
 	return redis.NewClient(&redis.Options{
 		Addr:     cfg.Redis.Address,
 		Password: cfg.Redis.Password,

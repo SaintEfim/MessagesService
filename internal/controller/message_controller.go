@@ -9,6 +9,7 @@ import (
 	"MessagesService/config"
 	"MessagesService/internal/models/entity"
 	"MessagesService/internal/models/interfaces"
+
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -40,11 +41,16 @@ func (c *MessageController) MessageProcessRequest(ctx context.Context, conn net.
 	}
 
 	if len(msg.Message) == 0 {
-		c.logger.Info("Received empty message, skipping write.")
+		_, err := conn.Write([]byte("User init\n"))
+		if err != nil {
+			c.logger.Error("Error writing response to connection:", zap.Error(err))
+			return err
+		}
+		c.logger.Info("Received empty message, responded with 'User init'.")
 		return nil
 	}
 
-	if err = c.writeTCPRequest(ctx, msg); err != nil {
+	if err := c.writeTCPRequest(ctx, msg); err != nil {
 		return err
 	}
 
@@ -53,9 +59,7 @@ func (c *MessageController) MessageProcessRequest(ctx context.Context, conn net.
 
 func (c *MessageController) readTCPRequest(ctx context.Context, scanner *bufio.Scanner, conn net.Conn) (entity.TCPRequest, error) {
 	var (
-		userId uuid.UUID
-		err    error
-		msg    entity.TCPRequest
+		msg entity.TCPRequest
 	)
 
 	for scanner.Scan() {
@@ -63,21 +67,21 @@ func (c *MessageController) readTCPRequest(ctx context.Context, scanner *bufio.S
 
 		c.logger.Info("Received raw message", zap.String("clientMessage", clientMessage))
 
-		if err = json.Unmarshal([]byte(clientMessage), &msg); err != nil {
+		if err := json.Unmarshal([]byte(clientMessage), &msg); err != nil {
 			c.logger.Error("Error unmarshalling JSON", zap.Error(err))
 			if _, err = conn.Write([]byte("Invalid JSON format.\n")); err != nil {
 				c.logger.Error("Error sending response to client:", zap.Error(err))
 			}
-
-			continue
+			return msg, err
 		}
 
-		if userId, err = c.parseJWTToken(ctx, msg.UserCredential); err != nil {
+		userId, err := c.parseJWTToken(ctx, msg.UserCredential)
+		if err != nil {
 			c.logger.Error("Error parsing user ID", zap.Error(err))
 			return msg, err
 		}
 
-		if err = c.repo.Set(ctx, userId.String(), conn.RemoteAddr().String()); err != nil {
+		if err := c.repo.Set(ctx, userId.String(), conn.RemoteAddr().String()); err != nil {
 			c.logger.Error("Error sending response to client:", zap.Error(err))
 			return msg, err
 		}
@@ -87,7 +91,7 @@ func (c *MessageController) readTCPRequest(ctx context.Context, scanner *bufio.S
 		break
 	}
 
-	if err = scanner.Err(); err != nil {
+	if err := scanner.Err(); err != nil {
 		c.logger.Error("Error reading from connection", zap.Error(err))
 		return msg, err
 	}
@@ -126,13 +130,10 @@ func (c *MessageController) writeTCPRequest(ctx context.Context, message entity.
 
 func (c *MessageController) parseJWTToken(ctx context.Context, user entity.UserCredential) (uuid.UUID, error) {
 	var (
-		err       error
-		userIdStr string
-		userId    uuid.UUID
-		claims    = jwt.MapClaims{}
+		claims = jwt.MapClaims{}
 	)
 
-	_, err = jwt.ParseWithClaims(user.Token, claims, func(token *jwt.Token) (interface{}, error) {
+	_, err := jwt.ParseWithClaims(user.Token, claims, func(token *jwt.Token) (interface{}, error) {
 		return []byte(c.cfg.AuthenticationConfiguration.AccessSecretKey), nil
 	})
 	if err != nil {
@@ -146,7 +147,7 @@ func (c *MessageController) parseJWTToken(ctx context.Context, user entity.UserC
 		return uuid.Nil, err
 	}
 
-	userId, err = uuid.Parse(userIdStr)
+	userId, err := uuid.Parse(userIdStr)
 	if err != nil {
 		c.logger.Error("Error parsing user ID", zap.Error(err))
 		return uuid.Nil, err

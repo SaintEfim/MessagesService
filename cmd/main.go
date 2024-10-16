@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+
 	"MessagesService/config"
 	"MessagesService/internal/controller"
 	"MessagesService/internal/handler"
@@ -8,11 +10,29 @@ import (
 	"MessagesService/internal/repository/redis"
 	"MessagesService/internal/server"
 	"MessagesService/pkg/logger"
-	"context"
 
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
+
+func registerRedis(lc fx.Lifecycle, mainCtx context.Context, cfg *config.Config) {
+	redisClient := redis.NewRedisClient(mainCtx, cfg)
+
+	lc.Append(fx.Hook{
+		OnStart: func(ctx context.Context) error {
+			if err := redisClient.Ping(ctx).Err(); err != nil {
+				return err
+			}
+			return nil
+		},
+		OnStop: func(ctx context.Context) error {
+			if err := redisClient.Close(); err != nil {
+				return err
+			}
+			return nil
+		},
+	})
+}
 
 func registerServer(lifecycle fx.Lifecycle, mainCtx context.Context, srv interfaces.TCPServer, logger *zap.Logger) {
 	lifecycle.Append(fx.Hook{
@@ -65,5 +85,6 @@ func main() {
 			handler.NewMessageHandler,
 			controller.NewMessageController),
 		fx.Invoke(registerServer),
+		fx.Invoke(registerRedis),
 	).Run()
 }
