@@ -14,6 +14,8 @@ import (
 	"go.uber.org/zap"
 )
 
+const keyForId = "nameid"
+
 type MessageController struct {
 	logger *zap.Logger
 	cfg    *config.Config
@@ -149,7 +151,7 @@ func (c *MessageController) parseJWTToken(ctx context.Context, user entity.UserC
 		c.logger.Error("Error parsing JWT token", zap.Error(err))
 	}
 
-	userIdStr, ok := claims["nameid"].(string)
+	userIdStr, ok := claims[keyForId].(string)
 	if !ok {
 		c.logger.Error("user_id not found in token claims or invalid type")
 		return uuid.Nil, err
