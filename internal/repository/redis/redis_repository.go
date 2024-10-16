@@ -24,16 +24,15 @@ func NewRedisRepository(client *redis.Client, cfg *config.Config) interfaces.Red
 func (repo *RedisRepository) withTimeout(ctx context.Context) (context.Context, context.CancelFunc) {
 	timeout := repo.cfg.Redis.Timeout
 	if timeout == 0 {
-		timeout = 5 * time.Second
+		timeout = 5 * time.Hour
 	}
 	return context.WithTimeout(ctx, timeout)
 }
 
 func (repo *RedisRepository) Set(ctx context.Context, key string, value string) error {
-	ctx, cancel := repo.withTimeout(ctx)
-	defer cancel()
+	ctxNew := context.Background()
 
-	if err := repo.client.Set(ctx, key, value, repo.cfg.Redis.Expiration*time.Second).Err(); err != nil {
+	if err := repo.client.Set(ctxNew, key, value, repo.cfg.Redis.Expiration*time.Second).Err(); err != nil {
 		return err
 	}
 
@@ -41,10 +40,9 @@ func (repo *RedisRepository) Set(ctx context.Context, key string, value string) 
 }
 
 func (repo *RedisRepository) Get(ctx context.Context, key string) (string, error) {
-	ctx, cancel := repo.withTimeout(ctx)
-	defer cancel()
+	ctxNew := context.Background()
 
-	val, err := repo.client.Get(ctx, key).Result()
+	val, err := repo.client.Get(ctxNew, key).Result()
 	if err != nil {
 		return "", err
 	}
