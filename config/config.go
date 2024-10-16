@@ -31,6 +31,7 @@ type Redis struct {
 	Password   string        `yaml:"Password"`
 	Db         int           `yaml:"Db"`
 	Expiration time.Duration `yaml:"Expiration"`
+	Timeout    time.Duration `yaml:"Timeout"`
 }
 
 type Logs struct {

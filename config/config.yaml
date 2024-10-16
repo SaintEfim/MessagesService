@@ -10,6 +10,7 @@ Redis:
   Password: ""
   Db: 0
   Expiration: 3600
+  Timeout: 5
 Logs:
   Path: ""
   Level: info

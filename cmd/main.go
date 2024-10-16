@@ -1,9 +1,6 @@
 package main
 
 import (
-	"context"
-	"time"
-
 	"MessagesService/config"
 	"MessagesService/internal/controller"
 	"MessagesService/internal/handler"
@@ -11,6 +8,7 @@ import (
 	"MessagesService/internal/repository/redis"
 	"MessagesService/internal/server"
 	"MessagesService/pkg/logger"
+	"context"
 
 	"go.uber.org/fx"
 	"go.uber.org/zap"
@@ -53,9 +51,7 @@ func registerServer(lifecycle fx.Lifecycle, srv interfaces.TCPServer, logger *za
 func main() {
 	fx.New(
 		fx.Provide(func() context.Context {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Hour)
-			defer cancel()
-			return ctx
+			return context.Background()
 		}),
 		fx.Provide(func() (*config.Config, error) {
 			return config.ReadConfig("config", "yaml", "./config")
