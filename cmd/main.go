@@ -58,7 +58,6 @@ func main() {
 		}),
 		fx.Provide(
 			logger.NewLogger,
-			redis.NewRedisClient,
 			redis.NewRedisRepository,
 			server.NewTCPListener,
 			server.NewTCPServer,

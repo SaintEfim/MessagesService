@@ -17,6 +17,17 @@ type TCPServer struct {
 	logger   *zap.Logger
 }
 
+func NewTCPListener(ctx context.Context, cfg *config.Config, logger *zap.Logger) (net.Listener, error) {
+	listener, err := net.Listen(cfg.Server.Type, cfg.Server.Port)
+	if err != nil {
+		logger.Error("Error starting TCP server", zap.String("port", cfg.Server.Port), zap.Error(err))
+		return nil, err
+	}
+
+	logger.Info("TCP server started", zap.String("port", cfg.Server.Port))
+	return listener, nil
+}
+
 func NewTCPServer(listener net.Listener, cfg *config.Config, handler interfaces.MessageHandler, logger *zap.Logger) interfaces.TCPServer {
 	return &TCPServer{
 		listener: listener,
@@ -31,17 +42,22 @@ func (s *TCPServer) AcceptLoop(ctx context.Context) error {
 		var conn, err = s.listener.Accept()
 		if err != nil {
 			s.logger.Error("Error accepting:", zap.Error(err))
+			return err
 		}
+
 		s.logger.Info("Connected with", zap.String("address", conn.RemoteAddr().String()))
+
+		var handleErr error
 
 		go func() {
 			if err := s.handler.MessageHandleRequest(ctx, conn); err != nil {
 				s.logger.Error("Error handling request:", zap.Error(err))
+				handleErr = err
 			}
 		}()
 
-		if err != nil {
-			return err
+		if handleErr != nil {
+			return handleErr
 		}
 	}
 }

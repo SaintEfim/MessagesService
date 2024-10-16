@@ -4,6 +4,7 @@ import (
 	"MessagesService/config"
 	"MessagesService/internal/models/interfaces"
 	"context"
+	"go.uber.org/zap"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -14,6 +15,14 @@ type RedisRepository struct {
 	cfg    *config.Config
 }
 
+func NewRedisClient(ctx context.Context, cfg *config.Config, logger *zap.Logger) *redis.Client {
+	return redis.NewClient(&redis.Options{
+		Addr:     cfg.Redis.Address,
+		Password: cfg.Redis.Password,
+		DB:       cfg.Redis.Db,
+	})
+}
+
 func NewRedisRepository(client *redis.Client, cfg *config.Config) interfaces.RedisRepository {
 	return &RedisRepository{
 		client: client,
@@ -21,16 +30,12 @@ func NewRedisRepository(client *redis.Client, cfg *config.Config) interfaces.Red
 	}
 }
 
-func (repo *RedisRepository) withTimeout(ctx context.Context) (context.Context, context.CancelFunc) {
-	timeout := repo.cfg.Redis.Timeout
-	if timeout == 0 {
-		timeout = 5 * time.Hour
-	}
-	return context.WithTimeout(ctx, timeout)
-}
-
 func (repo *RedisRepository) Set(ctx context.Context, key string, value string) error {
-	ctxNew := context.Background()
+	ctxNew, cancel := context.WithTimeout(ctx, repo.cfg.Redis.Timeout*time.Second)
+	if ctxNew.Err() != nil {
+		cancel()
+		return ctxNew.Err()
+	}
 
 	if err := repo.client.Set(ctxNew, key, value, repo.cfg.Redis.Expiration*time.Second).Err(); err != nil {
 		return err
@@ -40,7 +45,11 @@ func (repo *RedisRepository) Set(ctx context.Context, key string, value string) 
 }
 
 func (repo *RedisRepository) Get(ctx context.Context, key string) (string, error) {
-	ctxNew := context.Background()
+	ctxNew, cancel := context.WithTimeout(ctx, repo.cfg.Redis.Timeout*time.Second)
+	if ctxNew.Err() != nil {
+		cancel()
+		return "", ctxNew.Err()
+	}
 
 	val, err := repo.client.Get(ctxNew, key).Result()
 	if err != nil {

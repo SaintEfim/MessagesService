@@ -31,12 +31,6 @@ func NewMessageController(logger *zap.Logger, cfg *config.Config, repo interface
 }
 
 func (c *MessageController) MessageProcessRequest(ctx context.Context, conn net.Conn) error {
-	defer func() {
-		if err := conn.Close(); err != nil {
-			c.logger.Error("Error closing connection:", zap.Error(err))
-		}
-	}()
-
 	scanner := bufio.NewScanner(conn)
 
 	msg, err := c.readTCPRequest(ctx, scanner, conn)
@@ -108,16 +102,11 @@ func (c *MessageController) writeTCPRequest(ctx context.Context, message entity.
 		return err
 	}
 
-	colleagueConn, err := net.Dial("tcp", colleagueAddr)
+	colleagueConn, err := net.Dial(c.cfg.Server.Type, colleagueAddr)
 	if err != nil {
 		c.logger.Error("Error connecting to colleague:", zap.Error(err))
 		return err
 	}
-	defer func() {
-		if err := colleagueConn.Close(); err != nil {
-			c.logger.Error("Error closing colleague connection:", zap.Error(err))
-		}
-	}()
 
 	messageJSON, err := json.Marshal(message)
 	if err != nil {
@@ -146,7 +135,6 @@ func (c *MessageController) parseJWTToken(ctx context.Context, user entity.UserC
 	_, err = jwt.ParseWithClaims(user.Token, claims, func(token *jwt.Token) (interface{}, error) {
 		return []byte(c.cfg.AuthenticationConfiguration.AccessSecretKey), nil
 	})
-
 	if err != nil {
 		c.logger.Error("Error parsing JWT token", zap.Error(err))
 	}
@@ -158,7 +146,6 @@ func (c *MessageController) parseJWTToken(ctx context.Context, user entity.UserC
 	}
 
 	userId, err = uuid.Parse(userIdStr)
-
 	if err != nil {
 		c.logger.Error("Error parsing user ID", zap.Error(err))
 		return uuid.Nil, err
