@@ -9,8 +9,6 @@ import (
 	"MessagesService/config"
 	"MessagesService/internal/models/entity"
 	"MessagesService/internal/models/interfaces"
-	"MessagesService/internal/repository/redis"
-
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -19,10 +17,10 @@ import (
 type MessageController struct {
 	logger *zap.Logger
 	cfg    *config.Config
-	repo   *redis.RedisRepository
+	repo   interfaces.RedisRepository
 }
 
-func NewMessageController(logger *zap.Logger, cfg *config.Config, repo *redis.RedisRepository) interfaces.MessageController {
+func NewMessageController(logger *zap.Logger, cfg *config.Config, repo interfaces.RedisRepository) interfaces.MessageController {
 	return &MessageController{
 		logger: logger,
 		cfg:    cfg,
@@ -104,7 +102,7 @@ func (c *MessageController) writeTCPRequest(ctx context.Context, message entity.
 		return err
 	}
 
-	colleagueConn, err := net.Dial("tcp", colleagueAddr.(string))
+	colleagueConn, err := net.Dial("tcp", colleagueAddr)
 	if err != nil {
 		c.logger.Error("Error connecting to colleague:", zap.Error(err))
 		return err
@@ -127,7 +125,7 @@ func (c *MessageController) writeTCPRequest(ctx context.Context, message entity.
 		return err
 	}
 
-	c.logger.Info("Message sent to colleague", zap.String("colleague_addr", colleagueAddr.(string)))
+	c.logger.Info("Message sent to colleague", zap.String("colleague_addr", colleagueAddr))
 	return nil
 }
 

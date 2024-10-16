@@ -2,6 +2,7 @@ package redis
 
 import (
 	"MessagesService/config"
+	"MessagesService/internal/models/interfaces"
 	"context"
 	"time"
 
@@ -13,9 +14,10 @@ type RedisRepository struct {
 	cfg    *config.Config
 }
 
-func NewRedisRepository(client *redis.Client) *RedisRepository {
+func NewRedisRepository(client *redis.Client, cfg *config.Config) interfaces.RedisRepository {
 	return &RedisRepository{
 		client: client,
+		cfg:    cfg,
 	}
 }
 
@@ -38,13 +40,13 @@ func (repo *RedisRepository) Set(ctx context.Context, key string, value string) 
 	return nil
 }
 
-func (repo *RedisRepository) Get(ctx context.Context, key string) (interface{}, error) {
+func (repo *RedisRepository) Get(ctx context.Context, key string) (string, error) {
 	ctx, cancel := repo.withTimeout(ctx)
 	defer cancel()
 
 	val, err := repo.client.Get(ctx, key).Result()
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	return val, nil
