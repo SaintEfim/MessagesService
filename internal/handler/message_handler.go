@@ -2,10 +2,11 @@ package handler
 
 import (
 	"context"
-	"go.uber.org/zap"
 	"net"
 
 	"MessagesService/internal/models/interfaces"
+
+	"go.uber.org/zap"
 )
 
 type MessageHandler struct {
