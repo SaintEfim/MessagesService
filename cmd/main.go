@@ -11,13 +11,12 @@ import (
 	"MessagesService/internal/server"
 	"MessagesService/pkg/logger"
 
+	redisClient "github.com/redis/go-redis/v9"
 	"go.uber.org/fx"
 	"go.uber.org/zap"
 )
 
-func registerRedis(lc fx.Lifecycle, mainCtx context.Context, cfg *config.Config) {
-	redisClient := redis.NewRedisClient(mainCtx, cfg)
-
+func registerRedis(lc fx.Lifecycle, mainCtx context.Context, redisClient *redisClient.Client, cfg *config.Config) {
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			if err := redisClient.Ping(ctx).Err(); err != nil {
@@ -43,7 +42,7 @@ func registerServer(lifecycle fx.Lifecycle, mainCtx context.Context, srv interfa
 			go func() {
 				err = srv.AcceptLoop(mainCtx)
 				if err != nil {
-					logger.Error("Server failed to start", zap.Error(err))
+					logger.Error("Server failed to start" + err.Error())
 				} else {
 					logger.Info("Server started successfully")
 				}
@@ -58,7 +57,7 @@ func registerServer(lifecycle fx.Lifecycle, mainCtx context.Context, srv interfa
 			logger.Info("Stopping server...")
 
 			if err := srv.RefuseLoop(mainCtx); err != nil {
-				logger.Error("Failed to stop server", zap.Error(err))
+				logger.Error("Failed to stop server" + err.Error())
 				return err
 			}
 

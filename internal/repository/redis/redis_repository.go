@@ -23,14 +23,14 @@ func NewRedisClient(ctx context.Context, cfg *config.Config) *redis.Client {
 	})
 }
 
-func NewRedisRepository(client *redis.Client, cfg *config.Config) interfaces.RedisRepository {
+func NewRedisRepository(client *redis.Client, cfg *config.Config) interfaces.CacheRepository {
 	return &RedisRepository{
 		client: client,
 		cfg:    cfg,
 	}
 }
 
-func (repo *RedisRepository) Set(ctx context.Context, key string, value string) error {
+func (repo *RedisRepository) Set(ctx context.Context, key string, value interface{}) error {
 	ctxNew, cancel := context.WithTimeout(ctx, repo.cfg.Redis.Timeout*time.Second)
 	if ctxNew.Err() != nil {
 		cancel()
@@ -43,7 +43,7 @@ func (repo *RedisRepository) Set(ctx context.Context, key string, value string) 
 	return nil
 }
 
-func (repo *RedisRepository) Get(ctx context.Context, key string) (string, error) {
+func (repo *RedisRepository) Get(ctx context.Context, key string) (interface{}, error) {
 	ctxNew, cancel := context.WithTimeout(ctx, repo.cfg.Redis.Timeout*time.Second)
 	if ctxNew.Err() != nil {
 		cancel()

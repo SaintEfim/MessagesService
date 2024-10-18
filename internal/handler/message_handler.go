@@ -23,9 +23,7 @@ func NewMessageHandler(controller interfaces.MessageController, logger *zap.Logg
 
 func (h *MessageHandler) MessageHandleRequest(ctx context.Context, conn net.Conn) error {
 	var err = h.controller.MessageProcessRequest(ctx, conn)
-
 	if err != nil {
-		h.logger.Error("Error connection:", zap.Error(err))
 		return err
 	}
 

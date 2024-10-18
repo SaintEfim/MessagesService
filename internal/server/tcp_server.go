@@ -20,11 +20,11 @@ type TCPServer struct {
 func NewTCPListener(ctx context.Context, cfg *config.Config, logger *zap.Logger) (net.Listener, error) {
 	listener, err := net.Listen(cfg.Server.Type, cfg.Server.Port)
 	if err != nil {
-		logger.Error("Error starting TCP server", zap.String("port", cfg.Server.Port), zap.Error(err))
+		logger.Error("Error starting TCP server port" + cfg.Server.Port + err.Error())
 		return nil, err
 	}
 
-	logger.Info("TCP server started", zap.String("port", cfg.Server.Port))
+	logger.Info("TCP server started port" + cfg.Server.Port)
 	return listener, nil
 }
 
@@ -41,17 +41,15 @@ func (s *TCPServer) AcceptLoop(ctx context.Context) error {
 	for {
 		var conn, err = s.listener.Accept()
 		if err != nil {
-			s.logger.Error("Error accepting:", zap.Error(err))
+			s.logger.Error("Error accepting:" + err.Error())
 			return err
 		}
-
-		s.logger.Info("Connected with", zap.String("address", conn.RemoteAddr().String()))
 
 		var handleErr error
 
 		go func() {
 			if err := s.handler.MessageHandleRequest(ctx, conn); err != nil {
-				s.logger.Error("Error handling request:", zap.Error(err))
+				s.logger.Error("Error handling request:" + err.Error())
 				handleErr = err
 			}
 		}()
@@ -64,7 +62,8 @@ func (s *TCPServer) AcceptLoop(ctx context.Context) error {
 
 func (s *TCPServer) RefuseLoop(ctx context.Context) error {
 	if err := s.listener.Close(); err != nil {
-		s.logger.Error("Error closing:", zap.Error(err))
+		s.logger.Error("Error closing:" + err.Error())
+		return err
 	}
 	return nil
 }
