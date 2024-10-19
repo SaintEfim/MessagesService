@@ -10,6 +10,7 @@ import (
 	"MessagesService/internal/models/entity"
 	"MessagesService/internal/models/interfaces"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/google/uuid"
 	"go.uber.org/zap"
@@ -54,6 +55,7 @@ func (c *MessageController) MessageProcessRequest(ctx context.Context, conn net.
 
 func (c *MessageController) readTCPRequest(ctx context.Context, scanner *bufio.Scanner, conn net.Conn) (entity.TCPRequest, error) {
 	msg := entity.TCPRequest{}
+	validate := validator.New()
 
 	for scanner.Scan() {
 		clientMessage := scanner.Text()
@@ -61,6 +63,11 @@ func (c *MessageController) readTCPRequest(ctx context.Context, scanner *bufio.S
 		if err := json.Unmarshal([]byte(clientMessage), &msg); err != nil {
 			if _, err = conn.Write([]byte("Invalid JSON format.\n")); err != nil {
 			}
+			return msg, err
+		}
+
+		err := validate.Struct(msg)
+		if err != nil {
 			return msg, err
 		}
 
