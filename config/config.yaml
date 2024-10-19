@@ -1,5 +1,3 @@
-AuthenticationConfiguration:
-  AccessSecretKey: "tM+Lm9iti8KzwHNeHXVzQrIcMm8GNIFjf73UiZpKnP4="
 EnvironmentVariables:
   Environment: "development"
 Server:
@@ -10,10 +8,13 @@ Redis:
   Password: ""
   Db: 0
   Expiration: 3600
-  Timeout: 120
+  Timeout: 60
 Logs:
   Path: ""
   Level: info
   MaxAge: 1
   MaxBackups: 4
+Claims:
+  KeyForId: "nameid"
+
 

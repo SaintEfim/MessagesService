@@ -15,8 +15,6 @@ import (
 	"go.uber.org/zap"
 )
 
-const keyForId = "nameid"
-
 type MessageController struct {
 	logger *zap.Logger
 	cfg    *config.Config
@@ -118,7 +116,7 @@ func (c *MessageController) parseJWTToken(ctx context.Context, user entity.UserC
 		return uuid.Nil, err
 	}
 
-	userIdStr, ok := claims[keyForId].(string)
+	userIdStr, ok := claims[c.cfg.Claims.KeyForId].(string)
 	if !ok {
 		return uuid.Nil, err
 	}
