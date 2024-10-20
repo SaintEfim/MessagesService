@@ -33,24 +33,24 @@ func NewMessageController(logger *zap.Logger, cfg *config.Config, repo interface
 func (c *MessageController) MessageProcessRequest(ctx context.Context, conn net.Conn) error {
 	scanner := bufio.NewScanner(conn)
 
-	msg, err := c.readTCPRequest(ctx, scanner, conn)
-	if err != nil {
-		return err
-	}
-
-	if len(msg.Message) == 0 {
-		_, err := conn.Write([]byte("User init\n"))
+	for {
+		msg, err := c.readTCPRequest(ctx, scanner, conn)
 		if err != nil {
 			return err
 		}
-		return nil
-	}
 
-	if err := c.writeTCPRequest(ctx, msg); err != nil {
-		return err
-	}
+		if len(msg.Message) == 0 {
+			_, err := conn.Write([]byte("User init\n"))
+			if err != nil {
+				return err
+			}
+			continue
+		}
 
-	return nil
+		if err := c.writeTCPRequest(ctx, msg); err != nil {
+			return err
+		}
+	}
 }
 
 func (c *MessageController) readTCPRequest(ctx context.Context, scanner *bufio.Scanner, conn net.Conn) (*entity.TCPRequest, error) {
@@ -81,7 +81,7 @@ func (c *MessageController) readTCPRequest(ctx context.Context, scanner *bufio.S
 			return &msg, err
 		}
 
-		break
+		return &msg, nil
 	}
 
 	if err := scanner.Err(); err != nil {
