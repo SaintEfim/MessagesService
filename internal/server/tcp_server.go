@@ -39,13 +39,14 @@ func NewTCPServer(listener net.Listener, cfg *config.Config, handler interfaces.
 
 func (s *TCPServer) AcceptLoop(ctx context.Context) error {
 	for {
-		var conn, err = s.listener.Accept()
+		var (
+			conn, err = s.listener.Accept()
+			handleErr error
+		)
 		if err != nil {
 			s.logger.Error("Error accepting:" + err.Error())
 			return err
 		}
-
-		var handleErr error
 
 		go func() {
 			if err := s.handler.MessageHandleRequest(ctx, conn); err != nil {
