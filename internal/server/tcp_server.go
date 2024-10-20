@@ -43,6 +43,7 @@ func (s *TCPServer) AcceptLoop(ctx context.Context) error {
 			conn, err = s.listener.Accept()
 			handleErr error
 		)
+
 		if err != nil {
 			s.logger.Error("Error accepting:" + err.Error())
 			return err
