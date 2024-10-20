@@ -53,7 +53,7 @@ func (c *MessageController) MessageProcessRequest(ctx context.Context, conn net.
 	return nil
 }
 
-func (c *MessageController) readTCPRequest(ctx context.Context, scanner *bufio.Scanner, conn net.Conn) (entity.TCPRequest, error) {
+func (c *MessageController) readTCPRequest(ctx context.Context, scanner *bufio.Scanner, conn net.Conn) (*entity.TCPRequest, error) {
 	msg := entity.TCPRequest{}
 	validate := validator.New()
 
@@ -62,35 +62,36 @@ func (c *MessageController) readTCPRequest(ctx context.Context, scanner *bufio.S
 
 		if err := json.Unmarshal([]byte(clientMessage), &msg); err != nil {
 			if _, err = conn.Write([]byte("Invalid JSON format.\n")); err != nil {
+				return &msg, err
 			}
-			return msg, err
+			return &msg, err
 		}
 
 		err := validate.Struct(msg)
 		if err != nil {
-			return msg, err
+			return &msg, err
 		}
 
 		userId, err := c.parseJWTToken(ctx, msg.UserCredential)
 		if err != nil {
-			return msg, err
+			return &msg, err
 		}
 
 		if err := c.repo.Set(ctx, userId.String(), conn.RemoteAddr().String()); err != nil {
-			return msg, err
+			return &msg, err
 		}
 
 		break
 	}
 
 	if err := scanner.Err(); err != nil {
-		return msg, err
+		return &msg, err
 	}
 
-	return msg, nil
+	return &msg, nil
 }
 
-func (c *MessageController) writeTCPRequest(ctx context.Context, message entity.TCPRequest) error {
+func (c *MessageController) writeTCPRequest(ctx context.Context, message *entity.TCPRequest) error {
 	colleagueAddr, err := c.repo.Get(ctx, message.UserCredential.ColleagueId.String())
 	if err != nil {
 		return err
