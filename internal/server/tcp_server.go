@@ -39,10 +39,8 @@ func NewTCPServer(listener net.Listener, cfg *config.Config, handler interfaces.
 
 func (s *TCPServer) AcceptLoop(ctx context.Context) error {
 	for {
-		var (
-			conn, err = s.listener.Accept()
-			handleErr error
-		)
+		errCh := make(chan error, 1)
+		conn, err := s.listener.Accept()
 
 		if err != nil {
 			s.logger.Error("Error accepting:" + err.Error())
@@ -52,12 +50,21 @@ func (s *TCPServer) AcceptLoop(ctx context.Context) error {
 		go func() {
 			if err := s.handler.MessageHandleRequest(ctx, conn); err != nil {
 				s.logger.Error("Error handling request:" + err.Error())
-				handleErr = err
+				errCh <- err
 			}
 		}()
 
-		if handleErr != nil {
-			return handleErr
+		select {
+		case <-ctx.Done():
+			s.logger.Info("Closing TCP server listener")
+			return ctx.Err()
+		case handleErr := <-errCh:
+			if handleErr != nil {
+				s.logger.Error("Error handling request:" + handleErr.Error())
+				return err
+			}
+		default:
+			s.logger.Debug("Waiting for connection or error")
 		}
 	}
 }

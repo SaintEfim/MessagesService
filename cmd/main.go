@@ -38,19 +38,30 @@ func registerServer(lifecycle fx.Lifecycle, mainCtx context.Context, srv interfa
 		OnStart: func(ctx context.Context) error {
 			logger.Info("Starting server...")
 
-			var err error
+			errCh := make(chan error, 1)
+
 			go func() {
-				err = srv.AcceptLoop(mainCtx)
+				err := srv.AcceptLoop(mainCtx)
 				if err != nil {
-					logger.Error("Server failed to start" + err.Error())
+					logger.Error("Server failed to start: " + err.Error())
+					errCh <- err
 				} else {
 					logger.Info("Server started successfully")
 				}
 			}()
 
-			if err != nil {
-				return err
+			select {
+			case <-ctx.Done():
+				logger.Info("Context cancelled, stopping server")
+				return ctx.Err()
+			case err := <-errCh:
+				if err != nil {
+					return err
+				}
+			default:
+				logger.Info("Server started successfully")
 			}
+
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
