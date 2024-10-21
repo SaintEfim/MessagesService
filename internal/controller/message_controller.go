@@ -39,16 +39,19 @@ func (c *MessageController) MessageProcessRequest(ctx context.Context, conn net.
 			return err
 		}
 
-		if len(msg.Message) == 0 {
-			_, err := conn.Write([]byte("User init\n"))
+		switch msg.Operation {
+		case entity.OperationInit:
+			continue
+		case entity.OperationSendMessage:
+			if err := c.writeTCPRequest(ctx, msg); err != nil {
+				return err
+			}
+		default:
+			_, err := conn.Write([]byte("Operation not found\n"))
 			if err != nil {
 				return err
 			}
 			continue
-		}
-
-		if err := c.writeTCPRequest(ctx, msg); err != nil {
-			return err
 		}
 	}
 }
@@ -61,31 +64,47 @@ func (c *MessageController) readTCPRequest(ctx context.Context, scanner *bufio.S
 		clientMessage := scanner.Text()
 
 		if err := json.Unmarshal([]byte(clientMessage), &msg); err != nil {
-			if _, err = conn.Write([]byte("Invalid JSON format.\n")); err != nil {
-				return &msg, err
+			_, err := conn.Write([]byte("JSON Error: " + err.Error() + "\n"))
+			if err != nil {
+				return nil, err
 			}
-			return &msg, err
+			continue
 		}
 
-		err := validate.Struct(msg)
-		if err != nil {
-			return &msg, err
+		if err := validate.Struct(msg); err != nil {
+			_, err := conn.Write([]byte("Validation Error: " + err.Error() + "\n"))
+			if err != nil {
+				return nil, err
+			}
+			continue
 		}
 
 		userId, err := c.parseJWTToken(ctx, msg.UserCredential)
 		if err != nil {
-			return &msg, err
+			_, err := conn.Write([]byte("Token Error: " + err.Error() + "\n"))
+			if err != nil {
+				return nil, err
+			}
+			continue
 		}
 
 		if err := c.repo.Set(ctx, userId.String(), conn.RemoteAddr().String()); err != nil {
-			return &msg, err
+			_, err := conn.Write([]byte("Repository Error: " + err.Error() + "\n"))
+			if err != nil {
+				return nil, err
+			}
+			continue
 		}
 
 		return &msg, nil
 	}
 
 	if err := scanner.Err(); err != nil {
-		return &msg, err
+		_, err := conn.Write([]byte("Connection Error: " + err.Error() + "\n"))
+		if err != nil {
+			return nil, err
+		}
+		return nil, err
 	}
 
 	return &msg, nil
