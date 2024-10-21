@@ -38,7 +38,7 @@ func (c *MessageController) MessageProcessRequest(ctx context.Context, conn net.
 		if err != nil {
 			_, err := conn.Write([]byte("Read message Error: " + err.Error() + "\n"))
 			if err != nil {
-				return err
+				c.logger.Error("Error writing message" + err.Error())
 			}
 
 			continue
@@ -49,14 +49,13 @@ func (c *MessageController) MessageProcessRequest(ctx context.Context, conn net.
 			continue
 		case entity.OperationSendMessage:
 			if err := c.writeTCPRequest(ctx, msg); err != nil {
-				return err
+				c.logger.Error("Error writing message" + err.Error())
 			}
 		default:
 			_, err := conn.Write([]byte("Operation not found\n"))
 			if err != nil {
-				return err
+				c.logger.Error("Error writing message" + err.Error())
 			}
-			continue
 		}
 	}
 }
