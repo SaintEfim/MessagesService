@@ -36,7 +36,12 @@ func (c *MessageController) MessageProcessRequest(ctx context.Context, conn net.
 	for {
 		msg, err := c.readTCPRequest(ctx, scanner, conn)
 		if err != nil {
-			return err
+			_, err := conn.Write([]byte("Read message error: " + err.Error() + "\n"))
+			if err != nil {
+				return err
+			}
+
+			continue
 		}
 
 		switch msg.Operation {
