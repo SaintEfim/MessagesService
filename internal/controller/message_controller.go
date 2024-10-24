@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
+	"io"
 	"net"
 
 	"MessagesService/config"
@@ -36,9 +38,15 @@ func (c *MessageController) MessageProcessRequest(ctx context.Context, conn net.
 	for {
 		msg, err := c.readTCPRequest(ctx, scanner, conn)
 		if err != nil {
+			if errors.Is(err, io.EOF) {
+				c.logger.Info("Client disconnected")
+				break
+			}
+
 			_, err := conn.Write([]byte("Read message Error: " + err.Error() + "\n"))
 			if err != nil {
-				c.logger.Error("Error writing message" + err.Error())
+				c.logger.Error("Error writing message " + err.Error())
+				break
 			}
 
 			continue
@@ -49,15 +57,17 @@ func (c *MessageController) MessageProcessRequest(ctx context.Context, conn net.
 			continue
 		case entity.OperationSendMessage:
 			if err := c.writeTCPRequest(ctx, msg); err != nil {
-				c.logger.Error("Error writing message" + err.Error())
+				c.logger.Error("Error writing message " + err.Error())
 			}
 		default:
 			_, err := conn.Write([]byte("Operation not found\n"))
 			if err != nil {
-				c.logger.Error("Error writing message" + err.Error())
+				c.logger.Error("Error writing message " + err.Error())
 			}
 		}
 	}
+
+	return nil
 }
 
 func (c *MessageController) readTCPRequest(ctx context.Context, scanner *bufio.Scanner, conn net.Conn) (*entity.TCPRequest, error) {
@@ -68,50 +78,31 @@ func (c *MessageController) readTCPRequest(ctx context.Context, scanner *bufio.S
 		clientMessage := scanner.Text()
 
 		if err := json.Unmarshal([]byte(clientMessage), &msg); err != nil {
-			_, err := conn.Write([]byte("JSON Error: " + err.Error() + "\n"))
-			if err != nil {
-				return nil, err
-			}
-			continue
+			return &msg, err
 		}
 
 		if err := validate.Struct(msg); err != nil {
-			_, err := conn.Write([]byte("Validation Error: " + err.Error() + "\n"))
-			if err != nil {
-				return nil, err
-			}
-			continue
+			return &msg, err
 		}
 
 		userId, err := c.parseJWTToken(ctx, msg.UserCredential)
 		if err != nil {
-			_, err := conn.Write([]byte("Token Error: " + err.Error() + "\n"))
-			if err != nil {
-				return nil, err
-			}
-			continue
+			return &msg, err
 		}
 
 		if err := c.repo.Set(ctx, userId.String(), conn.RemoteAddr().String()); err != nil {
-			_, err := conn.Write([]byte("Repository Error: " + err.Error() + "\n"))
-			if err != nil {
-				return nil, err
-			}
-			continue
+			return &msg, err
 		}
 
 		return &msg, nil
 	}
 
 	if err := scanner.Err(); err != nil {
-		_, err := conn.Write([]byte("Connection Error: " + err.Error() + "\n"))
-		if err != nil {
-			return nil, err
-		}
-		return nil, err
+		c.logger.Error("Error scanning TCP Request: " + err.Error())
+		return &msg, err
 	}
 
-	return &msg, nil
+	return &msg, io.EOF
 }
 
 func (c *MessageController) writeTCPRequest(ctx context.Context, message *entity.TCPRequest) error {

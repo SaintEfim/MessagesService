@@ -90,6 +90,7 @@ func main() {
 			logger.NewLogger,
 			redis.NewRedisClient,
 			redis.NewRedisRepository,
+			server.NewWaitGroup,
 			server.NewTCPListener,
 			server.NewTCPServer,
 			handler.NewMessageHandler,
