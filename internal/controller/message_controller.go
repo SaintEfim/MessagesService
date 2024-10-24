@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
+	"io"
 	"net"
 
 	"MessagesService/config"
@@ -33,21 +35,36 @@ func NewMessageController(logger *zap.Logger, cfg *config.Config, repo interface
 func (c *MessageController) MessageProcessRequest(ctx context.Context, conn net.Conn) error {
 	scanner := bufio.NewScanner(conn)
 
-	msg, err := c.readTCPRequest(ctx, scanner, conn)
-	if err != nil {
-		return err
-	}
-
-	if len(msg.Message) == 0 {
-		_, err := conn.Write([]byte("User init\n"))
+	for {
+		msg, err := c.readTCPRequest(ctx, scanner, conn)
 		if err != nil {
-			return err
-		}
-		return nil
-	}
+			if errors.Is(err, io.EOF) {
+				c.logger.Info("Client disconnected")
+				break
+			}
 
-	if err := c.writeTCPRequest(ctx, msg); err != nil {
-		return err
+			_, err := conn.Write([]byte("Read message Error: " + err.Error() + "\n"))
+			if err != nil {
+				c.logger.Error("Error writing message " + err.Error())
+				break
+			}
+
+			continue
+		}
+
+		switch msg.Operation {
+		case entity.OperationInit:
+			continue
+		case entity.OperationSendMessage:
+			if err := c.writeTCPRequest(ctx, msg); err != nil {
+				c.logger.Error("Error writing message " + err.Error())
+			}
+		default:
+			_, err := conn.Write([]byte("Operation not found\n"))
+			if err != nil {
+				c.logger.Error("Error writing message " + err.Error())
+			}
+		}
 	}
 
 	return nil
@@ -61,14 +78,10 @@ func (c *MessageController) readTCPRequest(ctx context.Context, scanner *bufio.S
 		clientMessage := scanner.Text()
 
 		if err := json.Unmarshal([]byte(clientMessage), &msg); err != nil {
-			if _, err = conn.Write([]byte("Invalid JSON format.\n")); err != nil {
-				return &msg, err
-			}
 			return &msg, err
 		}
 
-		err := validate.Struct(msg)
-		if err != nil {
+		if err := validate.Struct(msg); err != nil {
 			return &msg, err
 		}
 
@@ -81,14 +94,15 @@ func (c *MessageController) readTCPRequest(ctx context.Context, scanner *bufio.S
 			return &msg, err
 		}
 
-		break
+		return &msg, nil
 	}
 
 	if err := scanner.Err(); err != nil {
+		c.logger.Error("Error scanning TCP Request: " + err.Error())
 		return &msg, err
 	}
 
-	return &msg, nil
+	return &msg, io.EOF
 }
 
 func (c *MessageController) writeTCPRequest(ctx context.Context, message *entity.TCPRequest) error {
