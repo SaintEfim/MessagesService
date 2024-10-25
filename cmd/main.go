@@ -42,14 +42,7 @@ func registerServer(lifecycle fx.Lifecycle,
 	logger *zap.Logger) {
 	lifecycle.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			var err error
-			go func() {
-				err = srv.AcceptConnection(mainCtx)
-			}()
-
-			if err != nil {
-				return err
-			}
+			go srv.AcceptConnection(mainCtx)
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
@@ -74,7 +67,7 @@ func main() {
 			return config.ReadConfig("config", "yaml", "./config")
 		}),
 		fx.Provide(func() chan error {
-			return make(chan error, 1)
+			return make(chan error)
 		}),
 		fx.Provide(
 			logger.NewLogger,

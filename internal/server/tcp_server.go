@@ -46,11 +46,12 @@ func NewTCPServer(
 	}
 }
 
-func (s *TCPServer) AcceptConnection(ctx context.Context) error {
+func (s *TCPServer) AcceptConnection(ctx context.Context) {
 	for {
 		conn, err := s.listener.Accept()
 		if err != nil {
-			panic("Error accepting:" + err.Error())
+			s.logger.Error("Error accepting connection" + err.Error())
+			continue
 		}
 
 		go func(conn net.Conn, ctx context.Context) {
@@ -62,18 +63,17 @@ func (s *TCPServer) AcceptConnection(ctx context.Context) error {
 				s.logger.Error("Error handling request: " + err.Error())
 				s.errCh <- err
 			}
-
-			select {
-			case err := <-s.errCh:
-				s.logger.Error("не знаю что делать......." + err.Error())
-			}
 		}(conn, ctx)
+
+		select {
+		case err := <-s.errCh:
+			s.logger.Error("Error handling request: " + err.Error())
+			continue
+		}
 	}
 }
 
 func (s *TCPServer) RefuseConnection(ctx context.Context) error {
-	defer close(s.errCh)
-
 	if err := s.listener.Close(); err != nil {
 		return err
 	}
