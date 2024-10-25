@@ -13,6 +13,7 @@ type TCPServer struct {
 	listener net.Listener
 	handler  interfaces.MessageHandler
 	logger   *zap.Logger
+	errCh    chan error
 	cfg      *config.Config
 }
 
@@ -34,22 +35,22 @@ func NewTCPServer(
 	listener net.Listener,
 	handler interfaces.MessageHandler,
 	logger *zap.Logger,
+	errCh chan error,
 	cfg *config.Config) interfaces.TCPServer {
 	return &TCPServer{
 		listener: listener,
 		handler:  handler,
 		logger:   logger,
+		errCh:    errCh,
 		cfg:      cfg,
 	}
 }
 
-func (s *TCPServer) AcceptConnection(ctx context.Context, errCh chan error) error {
+func (s *TCPServer) AcceptConnection(ctx context.Context) error {
 	for {
 		conn, err := s.listener.Accept()
 		if err != nil {
-			s.logger.Error("Error accepting:" + err.Error())
-
-			continue
+			panic("Error accepting:" + err.Error())
 		}
 
 		go func(conn net.Conn, ctx context.Context) {
@@ -59,13 +60,20 @@ func (s *TCPServer) AcceptConnection(ctx context.Context, errCh chan error) erro
 
 			if err := s.handler.MessageHandleRequest(ctx, conn); err != nil {
 				s.logger.Error("Error handling request: " + err.Error())
-				errCh <- err
+				s.errCh <- err
+			}
+
+			select {
+			case err := <-s.errCh:
+				s.logger.Error("не знаю что делать......." + err.Error())
 			}
 		}(conn, ctx)
 	}
 }
 
 func (s *TCPServer) RefuseConnection(ctx context.Context) error {
+	defer close(s.errCh)
+
 	if err := s.listener.Close(); err != nil {
 		s.logger.Error("Error closing:" + err.Error())
 		return err

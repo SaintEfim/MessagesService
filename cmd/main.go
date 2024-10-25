@@ -1,7 +1,6 @@
 package main
 
 import (
-	"MessagesService/internal/manager"
 	"context"
 
 	"MessagesService/config"
@@ -41,18 +40,17 @@ func registerServer(
 	lifecycle fx.Lifecycle,
 	mainCtx context.Context,
 	srv interfaces.TCPServer,
-	manager interfaces.Manager,
 	logger *zap.Logger) {
 	lifecycle.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			logger.Info("Starting server...")
-
+			var err error
 			go func() {
-				if err := manager.Start(ctx); err != nil {
-					return err
-				}
+				err = srv.AcceptConnection(ctx)
 			}()
 
+			if err != nil {
+				return err
+			}
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
@@ -84,7 +82,6 @@ func main() {
 			logger.NewLogger,
 			redis.NewRedisClient,
 			redis.NewRedisRepository,
-			manager.NewManager,
 			server.NewTCPListener,
 			server.NewTCPServer,
 			handler.NewMessageHandler,
