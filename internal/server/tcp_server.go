@@ -75,7 +75,6 @@ func (s *TCPServer) RefuseConnection(ctx context.Context) error {
 	defer close(s.errCh)
 
 	if err := s.listener.Close(); err != nil {
-		s.logger.Error("Error closing:" + err.Error())
 		return err
 	}
 	return nil
