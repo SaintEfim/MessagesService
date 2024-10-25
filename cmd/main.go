@@ -36,8 +36,7 @@ func registerRedis(
 	})
 }
 
-func registerServer(
-	lifecycle fx.Lifecycle,
+func registerServer(lifecycle fx.Lifecycle,
 	mainCtx context.Context,
 	srv interfaces.TCPServer,
 	logger *zap.Logger) {
@@ -45,7 +44,7 @@ func registerServer(
 		OnStart: func(ctx context.Context) error {
 			var err error
 			go func() {
-				err = srv.AcceptConnection(ctx)
+				err = srv.AcceptConnection(mainCtx)
 			}()
 
 			if err != nil {
@@ -66,7 +65,6 @@ func registerServer(
 		},
 	})
 }
-
 func main() {
 	fx.New(
 		fx.Provide(func() context.Context {
