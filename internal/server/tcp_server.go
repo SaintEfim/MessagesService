@@ -1,12 +1,10 @@
 package server
 
 import (
-	"context"
-	"net"
-	"sync"
-
 	"MessagesService/config"
 	"MessagesService/internal/models/interfaces"
+	"context"
+	"net"
 
 	"go.uber.org/zap"
 )
@@ -16,14 +14,12 @@ type TCPServer struct {
 	handler  interfaces.MessageHandler
 	logger   *zap.Logger
 	cfg      *config.Config
-	wg       *sync.WaitGroup
 }
 
-func NewWaitGroup() *sync.WaitGroup {
-	return &sync.WaitGroup{}
-}
-
-func NewTCPListener(ctx context.Context, logger *zap.Logger, cfg *config.Config) (net.Listener, error) {
+func NewTCPListener(
+	ctx context.Context,
+	logger *zap.Logger,
+	cfg *config.Config) (net.Listener, error) {
 	listener, err := net.Listen(cfg.Server.Type, cfg.Server.Port)
 	if err != nil {
 		logger.Error("Error starting TCP server port" + cfg.Server.Port + err.Error())
@@ -34,32 +30,29 @@ func NewTCPListener(ctx context.Context, logger *zap.Logger, cfg *config.Config)
 	return listener, nil
 }
 
-func NewTCPServer(listener net.Listener, handler interfaces.MessageHandler, logger *zap.Logger, cfg *config.Config, wg *sync.WaitGroup) interfaces.TCPServer {
+func NewTCPServer(
+	listener net.Listener,
+	handler interfaces.MessageHandler,
+	logger *zap.Logger,
+	cfg *config.Config) interfaces.TCPServer {
 	return &TCPServer{
 		listener: listener,
 		handler:  handler,
 		logger:   logger,
 		cfg:      cfg,
-		wg:       wg,
 	}
 }
 
-func (s *TCPServer) AcceptLoop(ctx context.Context) error {
+func (s *TCPServer) AcceptConnection(ctx context.Context, errCh chan error) error {
 	for {
-		errCh := make(chan error, 1)
-
-		s.wg.Add(1)
-
 		conn, err := s.listener.Accept()
 		if err != nil {
 			s.logger.Error("Error accepting:" + err.Error())
-			s.wg.Done()
 
 			continue
 		}
 
-		go func(conn net.Conn) {
-			defer s.wg.Done()
+		go func(conn net.Conn, ctx context.Context) {
 			defer conn.Close()
 
 			s.logger.Info("Accepting connection from " + conn.RemoteAddr().String())
@@ -68,30 +61,11 @@ func (s *TCPServer) AcceptLoop(ctx context.Context) error {
 				s.logger.Error("Error handling request: " + err.Error())
 				errCh <- err
 			}
-		}(conn)
-
-		select {
-		case <-ctx.Done():
-			s.logger.Info("Closing TCP server listener")
-			s.listener.Close()
-			s.wg.Done()
-
-			return ctx.Err()
-		case handleErr := <-errCh:
-			if handleErr != nil {
-				s.logger.Error("Error handling request:" + handleErr.Error())
-				s.listener.Close()
-				s.wg.Wait()
-
-				return err
-			}
-		default:
-			s.logger.Debug("Waiting for connection or error")
-		}
+		}(conn, ctx)
 	}
 }
 
-func (s *TCPServer) RefuseLoop(ctx context.Context) error {
+func (s *TCPServer) RefuseConnection(ctx context.Context) error {
 	if err := s.listener.Close(); err != nil {
 		s.logger.Error("Error closing:" + err.Error())
 		return err

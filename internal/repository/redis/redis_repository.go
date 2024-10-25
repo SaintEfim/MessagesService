@@ -40,6 +40,7 @@ func (repo *RedisRepository) Set(ctx context.Context, key string, value interfac
 	if err := repo.client.Set(ctxNew, key, value, repo.cfg.Redis.Expiration*time.Second).Err(); err != nil {
 		return err
 	}
+
 	return nil
 }
 

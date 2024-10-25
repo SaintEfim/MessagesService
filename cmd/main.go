@@ -1,6 +1,7 @@
 package main
 
 import (
+	"MessagesService/internal/manager"
 	"context"
 
 	"MessagesService/config"
@@ -16,10 +17,13 @@ import (
 	"go.uber.org/zap"
 )
 
-func registerRedis(lc fx.Lifecycle, mainCtx context.Context, redisClient *redisClient.Client, cfg *config.Config) {
+func registerRedis(
+	lc fx.Lifecycle,
+	mainCtx context.Context,
+	redisClient *redisClient.Client) {
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			if err := redisClient.Ping(ctx).Err(); err != nil {
+			if err := redisClient.Ping(mainCtx).Err(); err != nil {
 				return err
 			}
 			return nil
@@ -33,41 +37,28 @@ func registerRedis(lc fx.Lifecycle, mainCtx context.Context, redisClient *redisC
 	})
 }
 
-func registerServer(lifecycle fx.Lifecycle, mainCtx context.Context, srv interfaces.TCPServer, logger *zap.Logger) {
+func registerServer(
+	lifecycle fx.Lifecycle,
+	mainCtx context.Context,
+	srv interfaces.TCPServer,
+	manager interfaces.Manager,
+	logger *zap.Logger) {
 	lifecycle.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			logger.Info("Starting server...")
 
-			errCh := make(chan error, 1)
-
 			go func() {
-				err := srv.AcceptLoop(mainCtx)
-				if err != nil {
-					logger.Error("Server failed to start: " + err.Error())
-					errCh <- err
-				} else {
-					logger.Info("Server started successfully")
-				}
-			}()
-
-			select {
-			case <-ctx.Done():
-				logger.Info("Context cancelled, stopping server")
-				return ctx.Err()
-			case err := <-errCh:
-				if err != nil {
+				if err := manager.Start(ctx); err != nil {
 					return err
 				}
-			default:
-				logger.Info("Server started successfully")
-			}
+			}()
 
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
 			logger.Info("Stopping server...")
 
-			if err := srv.RefuseLoop(mainCtx); err != nil {
+			if err := srv.RefuseConnection(mainCtx); err != nil {
 				logger.Error("Failed to stop server" + err.Error())
 				return err
 			}
@@ -86,11 +77,14 @@ func main() {
 		fx.Provide(func() (*config.Config, error) {
 			return config.ReadConfig("config", "yaml", "./config")
 		}),
+		fx.Provide(func() chan error {
+			return make(chan error, 1)
+		}),
 		fx.Provide(
 			logger.NewLogger,
 			redis.NewRedisClient,
 			redis.NewRedisRepository,
-			server.NewWaitGroup,
+			manager.NewManager,
 			server.NewTCPListener,
 			server.NewTCPServer,
 			handler.NewMessageHandler,
