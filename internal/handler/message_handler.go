@@ -22,7 +22,7 @@ func NewMessageHandler(controller interfaces.MessageController, logger *zap.Logg
 }
 
 func (h *MessageHandler) MessageHandleRequest(ctx context.Context, conn net.Conn) error {
-	var err = h.controller.MessageProcessRequest(ctx, conn)
+	var err = h.controller.MessageHandleRequest(ctx, conn)
 	if err != nil {
 		return err
 	}

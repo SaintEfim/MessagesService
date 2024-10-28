@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"go.uber.org/fx/fxevent"
 
 	"MessagesService/config"
 	"MessagesService/internal/controller"
@@ -16,13 +17,10 @@ import (
 	"go.uber.org/zap"
 )
 
-func registerRedis(
-	lc fx.Lifecycle,
-	mainCtx context.Context,
-	redisClient *redisClient.Client) {
+func registerRedis(lc fx.Lifecycle, redisClient *redisClient.Client) {
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			if err := redisClient.Ping(mainCtx).Err(); err != nil {
+			if err := redisClient.Ping(ctx).Err(); err != nil {
 				return err
 			}
 			return nil
@@ -66,8 +64,8 @@ func main() {
 		fx.Provide(func() (*config.Config, error) {
 			return config.ReadConfig("config", "yaml", "./config")
 		}),
-		fx.Provide(func() chan error {
-			return make(chan error)
+		fx.WithLogger(func(log *zap.Logger) fxevent.Logger {
+			return &fxevent.ZapLogger{Logger: log}
 		}),
 		fx.Provide(
 			logger.NewLogger,

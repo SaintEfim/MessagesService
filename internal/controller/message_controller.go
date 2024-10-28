@@ -32,7 +32,7 @@ func NewMessageController(logger *zap.Logger, cfg *config.Config, repo interface
 	}
 }
 
-func (c *MessageController) MessageProcessRequest(ctx context.Context, conn net.Conn) error {
+func (c *MessageController) MessageHandleRequest(ctx context.Context, conn net.Conn) error {
 	scanner := bufio.NewScanner(conn)
 
 	for {
@@ -78,20 +78,20 @@ func (c *MessageController) readTCPRequest(ctx context.Context, scanner *bufio.S
 		clientMessage := scanner.Text()
 
 		if err := json.Unmarshal([]byte(clientMessage), &msg); err != nil {
-			return &msg, err
+			return nil, err
 		}
 
 		if err := validate.Struct(msg); err != nil {
-			return &msg, err
+			return nil, err
 		}
 
 		userId, err := c.parseJWTToken(ctx, msg.UserCredential)
 		if err != nil {
-			return &msg, err
+			return nil, err
 		}
 
 		if err := c.repo.Set(ctx, userId.String(), conn.RemoteAddr().String()); err != nil {
-			return &msg, err
+			return nil, err
 		}
 
 		return &msg, nil
@@ -99,10 +99,10 @@ func (c *MessageController) readTCPRequest(ctx context.Context, scanner *bufio.S
 
 	if err := scanner.Err(); err != nil {
 		c.logger.Error("Error scanning TCP Request: " + err.Error())
-		return &msg, err
+		return nil, err
 	}
 
-	return &msg, io.EOF
+	return nil, io.EOF
 }
 
 func (c *MessageController) writeTCPRequest(ctx context.Context, message *entity.TCPRequest) error {
