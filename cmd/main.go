@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"go.uber.org/fx/fxevent"
 
 	"MessagesService/config"
 	"MessagesService/internal/controller"
@@ -16,7 +17,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func registerRedis(lc fx.Lifecycle, mainCtx context.Context, redisClient *redisClient.Client, cfg *config.Config) {
+func registerRedis(lc fx.Lifecycle, redisClient *redisClient.Client) {
 	lc.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
 			if err := redisClient.Ping(ctx).Err(); err != nil {
@@ -33,30 +34,19 @@ func registerRedis(lc fx.Lifecycle, mainCtx context.Context, redisClient *redisC
 	})
 }
 
-func registerServer(lifecycle fx.Lifecycle, mainCtx context.Context, srv interfaces.TCPServer, logger *zap.Logger) {
+func registerServer(lifecycle fx.Lifecycle,
+	mainCtx context.Context,
+	srv interfaces.TCPServer,
+	logger *zap.Logger) {
 	lifecycle.Append(fx.Hook{
 		OnStart: func(ctx context.Context) error {
-			logger.Info("Starting server...")
-
-			var err error
-			go func() {
-				err = srv.AcceptLoop(mainCtx)
-				if err != nil {
-					logger.Error("Server failed to start" + err.Error())
-				} else {
-					logger.Info("Server started successfully")
-				}
-			}()
-
-			if err != nil {
-				return err
-			}
+			go srv.AcceptConnection(mainCtx)
 			return nil
 		},
 		OnStop: func(ctx context.Context) error {
 			logger.Info("Stopping server...")
 
-			if err := srv.RefuseLoop(mainCtx); err != nil {
+			if err := srv.RefuseConnection(mainCtx); err != nil {
 				logger.Error("Failed to stop server" + err.Error())
 				return err
 			}
@@ -66,7 +56,6 @@ func registerServer(lifecycle fx.Lifecycle, mainCtx context.Context, srv interfa
 		},
 	})
 }
-
 func main() {
 	fx.New(
 		fx.Provide(func() context.Context {
@@ -74,6 +63,9 @@ func main() {
 		}),
 		fx.Provide(func() (*config.Config, error) {
 			return config.ReadConfig("config", "yaml", "./config")
+		}),
+		fx.WithLogger(func(log *zap.Logger) fxevent.Logger {
+			return &fxevent.ZapLogger{Logger: log}
 		}),
 		fx.Provide(
 			logger.NewLogger,

@@ -6,5 +6,5 @@ import (
 )
 
 type MessageController interface {
-	MessageProcessRequest(ctx context.Context, conn net.Conn) error
+	MessageHandleRequest(ctx context.Context, conn net.Conn) error
 }
