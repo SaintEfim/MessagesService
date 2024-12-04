@@ -9,7 +9,7 @@ import (
 	"net"
 
 	"MessagesService/config"
-	"MessagesService/internal/models/entity"
+	"MessagesService/internal/models/dto"
 	"MessagesService/internal/models/interfaces"
 
 	"github.com/go-playground/validator/v10"
@@ -18,21 +18,21 @@ import (
 	"go.uber.org/zap"
 )
 
-type MessageController struct {
+type Controller struct {
 	logger *zap.Logger
 	cfg    *config.Config
 	repo   interfaces.CacheRepository
 }
 
-func NewMessageController(logger *zap.Logger, cfg *config.Config, repo interfaces.CacheRepository) interfaces.MessageController {
-	return &MessageController{
+func NewController(logger *zap.Logger, cfg *config.Config, repo interfaces.CacheRepository) interfaces.Controller {
+	return &Controller{
 		logger: logger,
 		cfg:    cfg,
 		repo:   repo,
 	}
 }
 
-func (c *MessageController) MessageHandleRequest(ctx context.Context, conn net.Conn) error {
+func (c *Controller) MessageHandleRequest(ctx context.Context, conn net.Conn) error {
 	scanner := bufio.NewScanner(conn)
 
 	for {
@@ -53,9 +53,9 @@ func (c *MessageController) MessageHandleRequest(ctx context.Context, conn net.C
 		}
 
 		switch msg.Operation {
-		case entity.OperationInit:
+		case dto.OperationInit:
 			continue
-		case entity.OperationSendMessage:
+		case dto.OperationSendMessage:
 			if err := c.writeTCPRequest(ctx, msg); err != nil {
 				c.logger.Error("Error writing message " + err.Error())
 			}
@@ -70,8 +70,8 @@ func (c *MessageController) MessageHandleRequest(ctx context.Context, conn net.C
 	return nil
 }
 
-func (c *MessageController) readTCPRequest(ctx context.Context, scanner *bufio.Scanner, conn net.Conn) (*entity.TCPRequest, error) {
-	msg := entity.TCPRequest{}
+func (c *Controller) readTCPRequest(ctx context.Context, scanner *bufio.Scanner, conn net.Conn) (*dto.TCPRequest, error) {
+	msg := dto.TCPRequest{}
 	validate := validator.New()
 
 	for scanner.Scan() {
@@ -105,7 +105,7 @@ func (c *MessageController) readTCPRequest(ctx context.Context, scanner *bufio.S
 	return nil, io.EOF
 }
 
-func (c *MessageController) writeTCPRequest(ctx context.Context, message *entity.TCPRequest) error {
+func (c *Controller) writeTCPRequest(ctx context.Context, message *dto.TCPRequest) error {
 	colleagueAddr, err := c.repo.Get(ctx, message.UserCredential.ColleagueId.String())
 	if err != nil {
 		return err
@@ -129,7 +129,7 @@ func (c *MessageController) writeTCPRequest(ctx context.Context, message *entity
 	return nil
 }
 
-func (c *MessageController) parseJWTToken(ctx context.Context, user entity.UserCredential) (uuid.UUID, error) {
+func (c *Controller) parseJWTToken(ctx context.Context, user dto.UserCredential) (uuid.UUID, error) {
 	claims := jwt.MapClaims{}
 	_, err := jwt.ParseWithClaims(user.Token, claims, func(token *jwt.Token) (interface{}, error) {
 		return []byte(c.cfg.AuthenticationConfiguration.AccessSecretKey), nil

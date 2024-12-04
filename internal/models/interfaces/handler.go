@@ -5,6 +5,6 @@ import (
 	"net"
 )
 
-type MessageController interface {
+type Handler interface {
 	MessageHandleRequest(ctx context.Context, conn net.Conn) error
 }

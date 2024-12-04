@@ -9,19 +9,19 @@ import (
 	"go.uber.org/zap"
 )
 
-type MessageHandler struct {
-	controller interfaces.MessageController
+type Handler struct {
+	controller interfaces.Controller
 	logger     *zap.Logger
 }
 
-func NewMessageHandler(controller interfaces.MessageController, logger *zap.Logger) interfaces.MessageHandler {
-	return &MessageHandler{
+func NewHandler(controller interfaces.Controller, logger *zap.Logger) interfaces.Handler {
+	return &Handler{
 		controller: controller,
 		logger:     logger,
 	}
 }
 
-func (h *MessageHandler) MessageHandleRequest(ctx context.Context, conn net.Conn) error {
+func (h *Handler) MessageHandleRequest(ctx context.Context, conn net.Conn) error {
 	var err = h.controller.MessageHandleRequest(ctx, conn)
 	if err != nil {
 		return err
