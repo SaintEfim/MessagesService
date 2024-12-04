@@ -1,43 +1,38 @@
 package server
 
 import (
-	"MessagesService/config"
-	"MessagesService/internal/models/interfaces"
 	"context"
 	"net"
+
+	"MessagesService/config"
+	"MessagesService/internal/models/interfaces"
 
 	"go.uber.org/zap"
 )
 
 type TCPServer struct {
 	listener net.Listener
-	handler  interfaces.MessageHandler
+	handler  interfaces.Handler
 	logger   *zap.Logger
 	cfg      *config.Config
 }
 
-func NewTCPListener(
+func NewTCPServer(
 	ctx context.Context,
-	cfg *config.Config) (net.Listener, error) {
-	listener, err := net.Listen(cfg.Server.Type, cfg.Server.Port)
+	handler interfaces.Handler,
+	logger *zap.Logger,
+	cfg *config.Config) (interfaces.TCPServer, error) {
+	listenerTCP, err := net.Listen(cfg.Server.Type, cfg.Server.Port)
 	if err != nil {
 		return nil, err
 	}
 
-	return listener, nil
-}
-
-func NewTCPServer(
-	listener net.Listener,
-	handler interfaces.MessageHandler,
-	logger *zap.Logger,
-	cfg *config.Config) interfaces.TCPServer {
 	return &TCPServer{
-		listener: listener,
+		listener: listenerTCP,
 		handler:  handler,
 		logger:   logger,
 		cfg:      cfg,
-	}
+	}, nil
 }
 
 func (s *TCPServer) AcceptConnection(ctx context.Context) {

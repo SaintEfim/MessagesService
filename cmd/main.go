@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"go.uber.org/fx/fxevent"
 
 	"MessagesService/config"
 	"MessagesService/internal/controller"
@@ -14,6 +13,7 @@ import (
 
 	redisClient "github.com/redis/go-redis/v9"
 	"go.uber.org/fx"
+	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap"
 )
 
@@ -71,10 +71,10 @@ func main() {
 			logger.NewLogger,
 			redis.NewRedisClient,
 			redis.NewRedisRepository,
-			server.NewTCPListener,
+			controller.NewController,
+			handler.NewHandler,
 			server.NewTCPServer,
-			handler.NewMessageHandler,
-			controller.NewMessageController),
+		),
 		fx.Invoke(registerServer),
 		fx.Invoke(registerRedis),
 	).Run()
