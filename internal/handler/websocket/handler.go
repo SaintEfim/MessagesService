@@ -70,7 +70,7 @@ func (h *Handler) Connect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	clientModel := &dto.Connect{}
+	clientModel := &dto.ConnectClient{}
 	if err := json.Unmarshal(req, clientModel); err != nil {
 		h.handleError(conn, "Invalid JSON format", err)
 		return
