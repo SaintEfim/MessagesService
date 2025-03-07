@@ -43,6 +43,25 @@ func (c *Controller) SendMessage(ctx context.Context, req *dto.SendMessage, conn
 	return c.receiveMessage(ctx, req, conn)
 }
 
+func (c *Controller) Connect(ctx context.Context, client *dto.Connect, conn interfaces.Transfer) error {
+	validate := validator.New()
+	if err := validate.Struct(client); err != nil {
+		if err := conn.TransferDataText("Failed validate: " + err.Error()); err != nil {
+			return err
+		}
+
+		return err
+	}
+
+	c.mu.Lock()
+	if _, exists := c.clients[client.Id]; !exists {
+		c.clients[client.Id] = conn
+	}
+	c.mu.Unlock()
+
+	return nil
+}
+
 func (c *Controller) receiveMessage(ctx context.Context, req *dto.SendMessage, conn interfaces.Transfer) error {
 	msg := &dto.ReceiveMessage{
 		Content:   req.Message,
