@@ -1,20 +1,15 @@
 EnvironmentVariables:
   Environment: "development"
 Server:
-  Type: "tcp"
-  Port: ":9000"
-Redis:
-  Address: "localhost:6379"
-  Password: ""
-  Db: 0
-  Expiration: 3600
-  Timeout: 60
+  Addr: "0.0.0.0"
+  Port: "1007"
+  Timeout: 5
 Logs:
   Path: ""
   Level: info
   MaxAge: 1
   MaxBackups: 4
-Claims:
-  KeyForId: "nameid"
-
+Cors:
+  AllowedOrigins:
+    - "http://localhost:4200"
 

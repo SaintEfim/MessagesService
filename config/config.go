@@ -1,23 +1,16 @@
 package config
 
 import (
-	"time"
-
 	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
+	"time"
 )
 
 type Config struct {
-	AuthenticationConfiguration AuthenticationConfiguration `yaml:"AuthenticationConfiguration"`
-	EnvironmentVariables        EnvironmentVariables        `yaml:"EnvironmentVariables"`
-	Server                      Server                      `yaml:"Server"`
-	Redis                       Redis                       `yaml:"Redis"`
-	Logs                        Logs                        `yaml:"Logs"`
-	Claims                      Claims                      `yaml:"Claims"`
-}
-
-type AuthenticationConfiguration struct {
-	AccessSecretKey string `yaml:"AccessSecretKey"`
+	EnvironmentVariables EnvironmentVariables `yaml:"EnvironmentVariables"`
+	Server               Server               `yaml:"Server"`
+	Logs                 Logs                 `yaml:"Logs"`
+	Cors                 Cors                 `yaml:"Cors"`
 }
 
 type EnvironmentVariables struct {
@@ -25,16 +18,9 @@ type EnvironmentVariables struct {
 }
 
 type Server struct {
-	Type string `yaml:"Type"`
-	Port string `yaml:"Port"`
-}
-
-type Redis struct {
-	Address    string        `yaml:"Address"`
-	Password   string        `yaml:"Password"`
-	Db         int           `yaml:"Db"`
-	Expiration time.Duration `yaml:"Expiration"`
-	Timeout    time.Duration `yaml:"Timeout"`
+	Addr    string        `yaml:"Addr"`
+	Port    string        `yaml:"Port"`
+	Timeout time.Duration `yaml:"Timeout"`
 }
 
 type Logs struct {
@@ -44,8 +30,8 @@ type Logs struct {
 	MaxBackups int    `yaml:"MaxBackups"`
 }
 
-type Claims struct {
-	KeyForId string `yaml:"Key"`
+type Cors struct {
+	AllowedOrigins []string `yaml:"AllowedOrigins"`
 }
 
 func ReadConfig(cfgName, cfgType, cfgPath string) (*Config, error) {
@@ -65,8 +51,6 @@ func ReadConfig(cfgName, cfgType, cfgPath string) (*Config, error) {
 	if err := godotenv.Load(); err != nil {
 		return nil, err
 	}
-
-	cfg.AuthenticationConfiguration.AccessSecretKey = viper.GetString("ACCESS_SECRET_KEY")
 
 	return &cfg, nil
 }
