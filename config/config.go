@@ -1,9 +1,9 @@
 package config
 
 import (
-	"github.com/joho/godotenv"
-	"github.com/spf13/viper"
 	"time"
+
+	"github.com/spf13/viper"
 )
 
 type Config struct {
@@ -40,15 +40,11 @@ func ReadConfig(cfgName, cfgType, cfgPath string) (*Config, error) {
 	viper.SetConfigName(cfgName)
 	viper.SetConfigType(cfgType)
 	viper.AddConfigPath(cfgPath)
-	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err != nil {
 		return nil, err
 	}
 	if err := viper.Unmarshal(&cfg); err != nil {
-		return nil, err
-	}
-	if err := godotenv.Load(); err != nil {
 		return nil, err
 	}
 

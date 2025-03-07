@@ -5,7 +5,7 @@ import (
 
 	"MessagesService/config"
 	"MessagesService/internal/controller"
-	"MessagesService/internal/handler"
+	websocketHandler "MessagesService/internal/handler/websocket"
 	"MessagesService/internal/models/interfaces"
 	websocketSrv "MessagesService/internal/server/websocket"
 	"MessagesService/pkg/logger"
@@ -36,7 +36,7 @@ func main() {
 		fx.Provide(
 			logger.NewLogger,
 			controller.NewController,
-			handler.NewHandler,
+			websocketHandler.NewHandler,
 			websocketSrv.NewServer,
 			websocketSrv.NewUpgrader,
 		),

@@ -17,3 +17,6 @@ func NewWebSocketConnection(conn *websocket.Conn) interfaces.Transfer {
 func (ws *WebSocketTransfer) TransferData(data interface{}) error {
 	return ws.conn.WriteJSON(data)
 }
+func (ws *WebSocketTransfer) TransferDataText(text string) error {
+	return ws.conn.WriteMessage(websocket.TextMessage, []byte(text))
+}
