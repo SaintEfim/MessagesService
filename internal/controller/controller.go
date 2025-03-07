@@ -69,13 +69,13 @@ func (c *Controller) receiveMessage(ctx context.Context, req *dto.SendMessage, c
 	}
 
 	c.mu.Lock()
-	if _, exists := c.clients[req.SenderID]; !exists {
-		c.clients[req.SenderID] = conn
+	if _, exists := c.clients[req.SenderId]; !exists {
+		c.clients[req.SenderId] = conn
 	}
 	c.mu.Unlock()
 
 	c.mu.Lock()
-	receiver, exists := c.clients[req.ReceiverID]
+	receiver, exists := c.clients[req.ReceiverId]
 	c.mu.Unlock()
 
 	if !exists {
