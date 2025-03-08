@@ -30,14 +30,10 @@ func NewController(logger *zap.Logger, cfg *config.Config) interfaces.Controller
 	}
 }
 
-func (c *Controller) SendMessage(ctx context.Context, req *dto.SendMessage, conn interfaces.Transfer) error {
+func (c *Controller) SendMessage(ctx context.Context, req *dto.SendMessage) error {
 	validate := validator.New()
-	conSender := c.clients[req.SenderId]
-
 	if err := validate.Struct(req); err != nil {
-		if err := conSender.TransferData(&dto.ResponseMessage{Error: "Failed validate: " + err.Error()}); err != nil {
-			return err
-		}
+		return err
 	}
 
 	return c.handleSendMessage(ctx, req)
@@ -54,17 +50,11 @@ func (c *Controller) handleSendMessage(ctx context.Context, req *dto.SendMessage
 
 	receiver, exists := c.clients[req.ReceiverId]
 	if !exists {
-		c.logger.Warn("Receiver not found",
-			zap.String("receiver_id", req.ReceiverId.String()))
 		// TODO: Сохранить сообщение в БД через gRPC
 		return nil
 	}
 
 	if err := receiver.TransferData(msg); err != nil {
-		c.logger.Error("Failed to send message",
-			zap.String("receiver_id", req.ReceiverId.String()),
-			zap.Error(err))
-
 		delete(c.clients, req.ReceiverId)
 		return err
 	}

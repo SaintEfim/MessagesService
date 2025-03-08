@@ -1,7 +1,6 @@
 package websocket
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 
@@ -37,21 +36,25 @@ func NewHandler(
 }
 
 func (h *Handler) ConfigureRoutes(r *mux.Router) {
-	r.HandleFunc("/api/v1/message", h.SendMessage)
+	r.HandleFunc("/api/v1/message", h.SendMessage).Methods("POST")
 	r.HandleFunc("/api/v1/message/connect", h.Connect)
 }
 
 func (h *Handler) SendMessage(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	conn, err := h.upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		h.handleError(nil, "Upgrader error", err)
+	request := &dto.SendMessage{}
+	if err := json.NewDecoder(r.Body).Decode(request); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
-	h.handleSendMessages(ctx, conn)
-	defer conn.Close()
+	if err := h.controller.SendMessage(ctx, request); err != nil {
+		http.Error(w, "Internal server error: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
 
 func (h *Handler) Connect(w http.ResponseWriter, r *http.Request) {
@@ -82,37 +85,6 @@ func (h *Handler) Connect(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_ = conn.WriteJSON(&dto.ResponseMessage{Text: "Success connect!"})
-}
-
-func (h *Handler) handleSendMessages(ctx context.Context, conn *websocket.Conn) {
-	for {
-		request, err := h.readMessage(conn)
-		if err != nil {
-			h.handleError(conn, "Message read error", err)
-			break
-		}
-
-		transfer := websocketTransfer.NewWebSocketConnection(conn)
-
-		if err := h.controller.SendMessage(ctx, request, transfer); err != nil {
-			h.handleError(conn, "Error sending message", err)
-			break
-		}
-	}
-}
-
-func (h *Handler) readMessage(conn *websocket.Conn) (*dto.SendMessage, error) {
-	_, msg, err := conn.ReadMessage()
-	if err != nil {
-		return nil, err
-	}
-
-	request := &dto.SendMessage{}
-	if err := json.Unmarshal(msg, request); err != nil {
-		return nil, err
-	}
-
-	return request, nil
 }
 
 func (h *Handler) handleError(conn *websocket.Conn, message string, err error) {
