@@ -46,11 +46,13 @@ func (h *Handler) SendMessage(w http.ResponseWriter, r *http.Request) {
 	request := &dto.SendMessage{}
 	if err := json.NewDecoder(r.Body).Decode(request); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		h.logger.Error("Error decoding request", zap.Error(err))
 		return
 	}
 
 	if err := h.controller.SendMessage(ctx, request); err != nil {
 		http.Error(w, "Internal server error: "+err.Error(), http.StatusInternalServerError)
+		h.logger.Error("Error sending message", zap.Error(err))
 		return
 	}
 
@@ -63,24 +65,28 @@ func (h *Handler) Connect(w http.ResponseWriter, r *http.Request) {
 	conn, err := h.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		h.handleError(nil, "Upgrader error", err)
+		h.logger.Error("Error upgrading connection", zap.Error(err))
 		return
 	}
 
 	_, req, err := conn.ReadMessage()
 	if err != nil {
 		h.handleError(conn, "Failed to read message", err)
+		h.logger.Error("Error reading message", zap.Error(err))
 		return
 	}
 
 	clientModel := &dto.ConnectClient{}
 	if err := json.Unmarshal(req, clientModel); err != nil {
 		h.handleError(conn, "Invalid JSON format", err)
+		h.logger.Error("Error unmarshalling message", zap.Error(err))
 		return
 	}
 
 	transfer := websocketTransfer.NewWebSocketConnection(conn)
 	if err := h.controller.Connect(ctx, clientModel, transfer); err != nil {
 		h.handleError(conn, "Invalid connect", err)
+		h.logger.Error("Error connecting to client", zap.Error(err))
 		return
 	}
 
@@ -91,5 +97,6 @@ func (h *Handler) handleError(conn *websocket.Conn, message string, err error) {
 	h.logger.Error(message, zap.Error(err))
 	if conn != nil {
 		_ = conn.WriteJSON(&dto.ResponseMessage{Error: message + ": " + err.Error()})
+		h.logger.Warn("Error sending message", zap.Error(err))
 	}
 }
