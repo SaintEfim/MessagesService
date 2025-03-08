@@ -32,58 +32,60 @@ func NewController(logger *zap.Logger, cfg *config.Config) interfaces.Controller
 
 func (c *Controller) SendMessage(ctx context.Context, req *dto.SendMessage, conn interfaces.Transfer) error {
 	validate := validator.New()
+	conSender := c.clients[req.SenderId]
+
 	if err := validate.Struct(req); err != nil {
-		if err := conn.TransferDataText("Failed validate: " + err.Error()); err != nil {
+		if err := conSender.TransferData(&dto.ResponseMessage{Error: "Failed validate: " + err.Error()}); err != nil {
 			return err
 		}
+	}
 
+	return c.handleSendMessage(ctx, req)
+}
+
+func (c *Controller) handleSendMessage(ctx context.Context, req *dto.SendMessage) error {
+	msg := &dto.ResponseMessage{
+		Text:      req.Text,
+		CreatedAt: time.Now(),
+	}
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	receiver, exists := c.clients[req.ReceiverId]
+	if !exists {
+		c.logger.Warn("Receiver not found",
+			zap.String("receiver_id", req.ReceiverId.String()))
+		// TODO: Сохранить сообщение в БД через gRPC
+		return nil
+	}
+
+	if err := receiver.TransferData(msg); err != nil {
+		c.logger.Error("Failed to send message",
+			zap.String("receiver_id", req.ReceiverId.String()),
+			zap.Error(err))
+
+		delete(c.clients, req.ReceiverId)
 		return err
 	}
 
-	return c.receiveMessage(ctx, req, conn)
+	c.logger.Info("Successfully send message: " + req.Text)
+
+	// TODO: Сохранить сообщение в БД после успешной отправки
+	return nil
 }
 
 func (c *Controller) Connect(ctx context.Context, client *dto.ConnectClient, conn interfaces.Transfer) error {
 	validate := validator.New()
 	if err := validate.Struct(client); err != nil {
-		if err := conn.TransferDataText("Failed validate: " + err.Error()); err != nil {
-			return err
-		}
-
+		_ = conn.TransferData(&dto.ResponseMessage{Error: "Failed validate: " + err.Error()})
 		return err
 	}
 
 	c.mu.Lock()
-	if _, exists := c.clients[client.Id]; !exists {
-		c.clients[client.Id] = conn
-	}
-	c.mu.Unlock()
+	defer c.mu.Unlock()
 
-	return nil
-}
+	c.clients[client.Id] = conn
 
-func (c *Controller) receiveMessage(ctx context.Context, req *dto.SendMessage, conn interfaces.Transfer) error {
-	msg := &dto.ReceiveMessage{
-		Content:   req.Message,
-		CreatedAt: time.Now(),
-	}
-
-	c.mu.Lock()
-	if _, exists := c.clients[req.SenderId]; !exists {
-		c.clients[req.SenderId] = conn
-	}
-	c.mu.Unlock()
-
-	c.mu.Lock()
-	receiver, exists := c.clients[req.ReceiverId]
-	c.mu.Unlock()
-
-	if !exists {
-		// TODO: Сохранить сообщение в БД через gRPC
-	} else if err := receiver.TransferData(msg); err != nil {
-		return err
-	}
-
-	// TODO: Сохранить сообщение в БД после успешной отправки
 	return nil
 }

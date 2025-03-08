@@ -37,8 +37,8 @@ func NewHandler(
 }
 
 func (h *Handler) ConfigureRoutes(r *mux.Router) {
-	r.HandleFunc("/api/v1/message", h.SendMessage).Methods("POST")
-	r.HandleFunc("/api/v1/message/connect", h.Connect).Methods("GET")
+	r.HandleFunc("/api/v1/message", h.SendMessage)
+	r.HandleFunc("/api/v1/message/connect", h.Connect)
 }
 
 func (h *Handler) SendMessage(w http.ResponseWriter, r *http.Request) {
@@ -49,9 +49,9 @@ func (h *Handler) SendMessage(w http.ResponseWriter, r *http.Request) {
 		h.handleError(nil, "Upgrader error", err)
 		return
 	}
-	defer conn.Close()
 
-	h.handleMessages(ctx, conn)
+	h.handleSendMessages(ctx, conn)
+	defer conn.Close()
 }
 
 func (h *Handler) Connect(w http.ResponseWriter, r *http.Request) {
@@ -62,7 +62,6 @@ func (h *Handler) Connect(w http.ResponseWriter, r *http.Request) {
 		h.handleError(nil, "Upgrader error", err)
 		return
 	}
-	defer conn.Close()
 
 	_, req, err := conn.ReadMessage()
 	if err != nil {
@@ -77,10 +76,15 @@ func (h *Handler) Connect(w http.ResponseWriter, r *http.Request) {
 	}
 
 	transfer := websocketTransfer.NewWebSocketConnection(conn)
-	h.controller.Connect(ctx, clientModel, transfer)
+	if err := h.controller.Connect(ctx, clientModel, transfer); err != nil {
+		h.handleError(conn, "Invalid connect", err)
+		return
+	}
+
+	_ = conn.WriteJSON(&dto.ResponseMessage{Text: "Success connect!"})
 }
 
-func (h *Handler) handleMessages(ctx context.Context, conn *websocket.Conn) {
+func (h *Handler) handleSendMessages(ctx context.Context, conn *websocket.Conn) {
 	for {
 		request, err := h.readMessage(conn)
 		if err != nil {
@@ -114,6 +118,6 @@ func (h *Handler) readMessage(conn *websocket.Conn) (*dto.SendMessage, error) {
 func (h *Handler) handleError(conn *websocket.Conn, message string, err error) {
 	h.logger.Error(message, zap.Error(err))
 	if conn != nil {
-		_ = conn.WriteMessage(websocket.TextMessage, []byte(message+": "+err.Error()))
+		_ = conn.WriteJSON(&dto.ResponseMessage{Error: message + ": " + err.Error()})
 	}
 }
