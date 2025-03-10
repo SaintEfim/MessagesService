@@ -50,13 +50,17 @@ func (h *Handler) SendMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.controller.SendMessage(ctx, request); err != nil {
+	res, err := h.controller.SendMessage(ctx, request)
+	if err != nil {
 		http.Error(w, "Internal server error: "+err.Error(), http.StatusInternalServerError)
 		h.logger.Error("Error sending message", zap.Error(err))
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(res); err != nil {
+		h.logger.Error("Error encoding response", zap.Error(err))
+	}
 }
 
 func (h *Handler) Connect(w http.ResponseWriter, r *http.Request) {
@@ -90,13 +94,13 @@ func (h *Handler) Connect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_ = conn.WriteJSON(&dto.ResponseMessage{Text: "Success connect!"})
+	_ = conn.WriteMessage(websocket.TextMessage, []byte("Success connect!"))
 }
 
 func (h *Handler) handleError(conn *websocket.Conn, message string, err error) {
 	h.logger.Error(message, zap.Error(err))
 	if conn != nil {
-		_ = conn.WriteJSON(&dto.ResponseMessage{Error: message + ": " + err.Error()})
+		_ = conn.WriteMessage(websocket.TextMessage, []byte(message+": "+err.Error()))
 		h.logger.Warn("Error sending message", zap.Error(err))
 	}
 }

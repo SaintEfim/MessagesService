@@ -7,6 +7,6 @@ import (
 )
 
 type Controller interface {
-	SendMessage(ctx context.Context, req *dto.SendMessage) error
+	SendMessage(ctx context.Context, req *dto.SendMessage) (*dto.ResponseMessage, error)
 	Connect(ctx context.Context, client *dto.ConnectClient, conn Transfer) error
 }

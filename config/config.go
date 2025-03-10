@@ -9,6 +9,7 @@ import (
 type Config struct {
 	EnvironmentVariables EnvironmentVariables `yaml:"EnvironmentVariables"`
 	Server               Server               `yaml:"Server"`
+	GRPCClient           GRPCClient           `yaml:"GRPCClient"`
 	Logs                 Logs                 `yaml:"Logs"`
 	Cors                 Cors                 `yaml:"Cors"`
 }
@@ -21,6 +22,10 @@ type Server struct {
 	Addr    string        `yaml:"Addr"`
 	Port    string        `yaml:"Port"`
 	Timeout time.Duration `yaml:"Timeout"`
+}
+
+type GRPCClient struct {
+	Services map[string]string `yaml:"Services"`
 }
 
 type Logs struct {
