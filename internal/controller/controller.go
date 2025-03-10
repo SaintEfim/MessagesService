@@ -42,7 +42,7 @@ func (c *Controller) SendMessage(ctx context.Context, req *dto.SendMessage) erro
 func (c *Controller) handleSendMessage(ctx context.Context, req *dto.SendMessage) error {
 	msg := &dto.ResponseMessage{
 		Text:      req.Text,
-		CreatedAt: time.Now(),
+		CreatedAt: time.Now(), // TODO: Должны заполнять из ответа
 	}
 
 	c.mu.Lock()
