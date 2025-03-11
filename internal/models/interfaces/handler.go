@@ -1,10 +1,13 @@
 package interfaces
 
 import (
-	"context"
-	"net"
+	"net/http"
+
+	"github.com/gorilla/mux"
 )
 
 type Handler interface {
-	MessageHandleRequest(ctx context.Context, conn net.Conn) error
+	ConfigureRoutes(r *mux.Router)
+	SendMessage(w http.ResponseWriter, r *http.Request)
+	Connect(w http.ResponseWriter, r *http.Request)
 }

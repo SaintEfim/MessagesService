@@ -3,21 +3,15 @@ package config
 import (
 	"time"
 
-	"github.com/joho/godotenv"
 	"github.com/spf13/viper"
 )
 
 type Config struct {
-	AuthenticationConfiguration AuthenticationConfiguration `yaml:"AuthenticationConfiguration"`
-	EnvironmentVariables        EnvironmentVariables        `yaml:"EnvironmentVariables"`
-	Server                      Server                      `yaml:"Server"`
-	Redis                       Redis                       `yaml:"Redis"`
-	Logs                        Logs                        `yaml:"Logs"`
-	Claims                      Claims                      `yaml:"Claims"`
-}
-
-type AuthenticationConfiguration struct {
-	AccessSecretKey string `yaml:"AccessSecretKey"`
+	EnvironmentVariables EnvironmentVariables `yaml:"EnvironmentVariables"`
+	Server               Server               `yaml:"Server"`
+	GRPCClient           GRPCClient           `yaml:"GRPCClient"`
+	Logs                 Logs                 `yaml:"Logs"`
+	Cors                 Cors                 `yaml:"Cors"`
 }
 
 type EnvironmentVariables struct {
@@ -25,16 +19,13 @@ type EnvironmentVariables struct {
 }
 
 type Server struct {
-	Type string `yaml:"Type"`
-	Port string `yaml:"Port"`
+	Addr    string        `yaml:"Addr"`
+	Port    string        `yaml:"Port"`
+	Timeout time.Duration `yaml:"Timeout"`
 }
 
-type Redis struct {
-	Address    string        `yaml:"Address"`
-	Password   string        `yaml:"Password"`
-	Db         int           `yaml:"Db"`
-	Expiration time.Duration `yaml:"Expiration"`
-	Timeout    time.Duration `yaml:"Timeout"`
+type GRPCClient struct {
+	Services map[string]string `yaml:"Services"`
 }
 
 type Logs struct {
@@ -44,8 +35,8 @@ type Logs struct {
 	MaxBackups int    `yaml:"MaxBackups"`
 }
 
-type Claims struct {
-	KeyForId string `yaml:"Key"`
+type Cors struct {
+	AllowedOrigins []string `yaml:"AllowedOrigins"`
 }
 
 func ReadConfig(cfgName, cfgType, cfgPath string) (*Config, error) {
@@ -54,7 +45,6 @@ func ReadConfig(cfgName, cfgType, cfgPath string) (*Config, error) {
 	viper.SetConfigName(cfgName)
 	viper.SetConfigType(cfgType)
 	viper.AddConfigPath(cfgPath)
-	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err != nil {
 		return nil, err
@@ -62,11 +52,6 @@ func ReadConfig(cfgName, cfgType, cfgPath string) (*Config, error) {
 	if err := viper.Unmarshal(&cfg); err != nil {
 		return nil, err
 	}
-	if err := godotenv.Load(); err != nil {
-		return nil, err
-	}
-
-	cfg.AuthenticationConfiguration.AccessSecretKey = viper.GetString("ACCESS_SECRET_KEY")
 
 	return &cfg, nil
 }

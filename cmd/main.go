@@ -5,57 +5,31 @@ import (
 
 	"MessagesService/config"
 	"MessagesService/internal/controller"
-	"MessagesService/internal/handler"
+	grpcSrv "MessagesService/internal/delivery/grpc"
+	websocketHandler "MessagesService/internal/handler/websocket"
 	"MessagesService/internal/models/interfaces"
-	"MessagesService/internal/repository/redis"
-	"MessagesService/internal/server"
+	websocketSrv "MessagesService/internal/server/websocket"
 	"MessagesService/pkg/logger"
 
-	redisClient "github.com/redis/go-redis/v9"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
 	"go.uber.org/zap"
 )
 
-func registerRedis(lc fx.Lifecycle, redisClient *redisClient.Client) {
+func registerServer(lc fx.Lifecycle, srv interfaces.Server) {
 	lc.Append(fx.Hook{
-		OnStart: func(ctx context.Context) error {
-			if err := redisClient.Ping(ctx).Err(); err != nil {
-				return err
-			}
-			return nil
-		},
-		OnStop: func(ctx context.Context) error {
-			if err := redisClient.Close(); err != nil {
-				return err
-			}
-			return nil
-		},
+		OnStart: srv.Run,
+		OnStop:  srv.Stop,
 	})
 }
 
-func registerServer(lifecycle fx.Lifecycle,
-	mainCtx context.Context,
-	srv interfaces.TCPServer,
-	logger *zap.Logger) {
-	lifecycle.Append(fx.Hook{
-		OnStart: func(ctx context.Context) error {
-			go srv.AcceptConnection(mainCtx)
-			return nil
-		},
-		OnStop: func(ctx context.Context) error {
-			logger.Info("Stopping server...")
-
-			if err := srv.RefuseConnection(mainCtx); err != nil {
-				logger.Error("Failed to stop server" + err.Error())
-				return err
-			}
-
-			logger.Info("Server stopped successfully")
-			return nil
-		},
+func registerGRPCClient(lc fx.Lifecycle, client interfaces.ChatGrpcClient) {
+	lc.Append(fx.Hook{
+		OnStart: client.Initialize,
+		OnStop:  client.Close,
 	})
 }
+
 func main() {
 	fx.New(
 		fx.Provide(func() context.Context {
@@ -69,13 +43,13 @@ func main() {
 		}),
 		fx.Provide(
 			logger.NewLogger,
-			redis.NewRedisClient,
-			redis.NewRedisRepository,
 			controller.NewController,
-			handler.NewHandler,
-			server.NewTCPServer,
+			grpcSrv.NewChatGrpcClient,
+			websocketHandler.NewHandler,
+			websocketSrv.NewServer,
+			websocketSrv.NewUpgrader,
 		),
 		fx.Invoke(registerServer),
-		fx.Invoke(registerRedis),
+		fx.Invoke(registerGRPCClient),
 	).Run()
 }

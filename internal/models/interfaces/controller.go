@@ -2,9 +2,11 @@ package interfaces
 
 import (
 	"context"
-	"net"
+
+	"MessagesService/internal/models/dto"
 )
 
 type Controller interface {
-	MessageHandleRequest(ctx context.Context, conn net.Conn) error
+	SendMessage(ctx context.Context, req *dto.SendMessage) (*dto.CreateAction, error)
+	Connect(ctx context.Context, client *dto.ConnectClient, conn Transfer) error
 }
