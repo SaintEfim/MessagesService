@@ -62,20 +62,14 @@ func (c *Controller) handleSendMessage(ctx context.Context, req *dto.SendMessage
 		return nil, err
 	}
 
-	res := &dto.CreateAction{
-		Id: id,
-	}
-
-	reqReceiver := &dto.Messages{
-		Text: req.Text,
-	}
-
 	c.mu.Lock()
 	receiver, exists := c.clients[req.ReceiverId]
 	c.mu.Unlock()
 
 	if exists {
-		if err := receiver.TransferData(reqReceiver); err != nil {
+		if err := receiver.TransferData(&dto.Messages{
+			Text: req.Text,
+		}); err != nil {
 			c.mu.Lock()
 			delete(c.clients, req.ReceiverId)
 			c.mu.Unlock()
@@ -83,7 +77,9 @@ func (c *Controller) handleSendMessage(ctx context.Context, req *dto.SendMessage
 		}
 	}
 
-	return res, nil
+	return &dto.CreateAction{
+		Id: id,
+	}, nil
 }
 
 func (c *Controller) Connect(ctx context.Context, client *dto.ConnectClient, conn interfaces.Transfer) error {
@@ -93,9 +89,8 @@ func (c *Controller) Connect(ctx context.Context, client *dto.ConnectClient, con
 	}
 
 	c.mu.Lock()
-	defer c.mu.Unlock()
-
 	c.clients[client.Id] = conn
+	c.mu.Unlock()
 
 	return nil
 }
