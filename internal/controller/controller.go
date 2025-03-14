@@ -64,7 +64,7 @@ func (c *Controller) handleSendMessage(ctx context.Context, req *dto.SendMessage
 		return nil, err
 	}
 
-	createdAt, err := time.Parse(time.RFC3339, resChatClient.CreateAt)
+	createdAt, err := time.Parse("2006-01-02 15:04:05 -0700 MST", resChatClient.CreateAt)
 	if err != nil {
 		log.Printf("Failed to parse CreateAt: %v", err)
 		return nil, err
