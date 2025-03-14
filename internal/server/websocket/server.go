@@ -58,8 +58,8 @@ func (s *Server) Run(ctx context.Context) error {
 		r := mux.NewRouter()
 		r.Use(middleware.AuthMiddleware(s.logger, s.cfg.AuthenticationConfiguration.AccessSecretKey))
 
-		s.handler.ConfigureRoutes(r)
-		s.srv.Handler = r
+		handler := CorsSettings(s.cfg).Handler(r)
+		s.srv.Handler = handler
 
 		if err = s.srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			s.logger.Error("failed to start server", zap.Error(err))
