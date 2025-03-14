@@ -12,19 +12,24 @@ import (
 func AuthMiddleware(logger *zap.Logger, secretKey string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			authHeader := r.Header.Get("Authorization")
-			if authHeader == "" {
-				http.Error(w, "Missing Authorization header", http.StatusUnauthorized)
-				return
+			var tokenStr string
+			tokenStr = r.URL.Query().Get("token")
+
+			if tokenStr == "" {
+				authHeader := r.Header.Get("Authorization")
+				if authHeader == "" {
+					http.Error(w, "Missing Authorization", http.StatusUnauthorized)
+					return
+				}
+
+				parts := strings.SplitN(authHeader, " ", 2)
+				if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
+					http.Error(w, "Invalid Authorization format", http.StatusUnauthorized)
+					return
+				}
+				tokenStr = parts[1]
 			}
 
-			parts := strings.SplitN(authHeader, " ", 2)
-			if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-				http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
-				return
-			}
-
-			tokenStr := parts[1]
 			token, err := jwt.Parse(tokenStr, func(token *jwt.Token) (interface{}, error) {
 				return []byte(secretKey), nil
 			})
