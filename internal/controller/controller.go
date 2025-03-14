@@ -2,7 +2,9 @@ package controller
 
 import (
 	"context"
+	"log"
 	"sync"
+	"time"
 
 	"MessagesService/config"
 	"MessagesService/internal/models/dto"
@@ -62,13 +64,20 @@ func (c *Controller) handleSendMessage(ctx context.Context, req *dto.SendMessage
 		return nil, err
 	}
 
+	createdAt, err := time.Parse(time.RFC3339, resChatClient.CreateAt)
+	if err != nil {
+		log.Printf("Failed to parse CreateAt: %v", err)
+		return nil, err
+	}
+
 	c.mu.Lock()
 	receiver, exists := c.clients[req.ReceiverId]
 	c.mu.Unlock()
 
 	if exists {
 		if err := receiver.TransferData(&dto.Messages{
-			Text: req.Text,
+			Text:     req.Text,
+			CreateAt: createdAt,
 		}); err != nil {
 			c.mu.Lock()
 			delete(c.clients, req.ReceiverId)
@@ -78,7 +87,8 @@ func (c *Controller) handleSendMessage(ctx context.Context, req *dto.SendMessage
 	}
 
 	return &dto.CreateAction{
-		Id: id,
+		Id:        id,
+		CreatedAt: createdAt,
 	}, nil
 }
 
