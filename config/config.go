@@ -7,11 +7,12 @@ import (
 )
 
 type Config struct {
-	EnvironmentVariables EnvironmentVariables `yaml:"EnvironmentVariables"`
-	Server               Server               `yaml:"Server"`
-	GRPCClient           GRPCClient           `yaml:"GRPCClient"`
-	Logs                 Logs                 `yaml:"Logs"`
-	Cors                 Cors                 `yaml:"Cors"`
+	EnvironmentVariables        EnvironmentVariables        `yaml:"EnvironmentVariables"`
+	Server                      Server                      `yaml:"Server"`
+	GRPCClient                  GRPCClient                  `yaml:"GRPCClient"`
+	Logs                        Logs                        `yaml:"Logs"`
+	Cors                        Cors                        `yaml:"Cors"`
+	AuthenticationConfiguration AuthenticationConfiguration `yaml:"AuthenticationConfiguration"`
 }
 
 type EnvironmentVariables struct {
@@ -37,6 +38,10 @@ type Logs struct {
 
 type Cors struct {
 	AllowedOrigins []string `yaml:"AllowedOrigins"`
+}
+
+type AuthenticationConfiguration struct {
+	AccessSecretKey string `yaml:"AccessSecretKey"`
 }
 
 func ReadConfig(cfgName, cfgType, cfgPath string) (*Config, error) {

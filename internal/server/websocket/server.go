@@ -1,6 +1,7 @@
 package websocket
 
 import (
+	"MessagesService/internal/middleware"
 	"context"
 	"errors"
 	"net"
@@ -55,6 +56,8 @@ func (s *Server) Run(ctx context.Context) error {
 	var err error
 	go func() {
 		r := mux.NewRouter()
+		r.Use(middleware.AuthMiddleware(s.logger, s.cfg.AuthenticationConfiguration.AccessSecretKey))
+
 		s.handler.ConfigureRoutes(r)
 		s.srv.Handler = r
 
