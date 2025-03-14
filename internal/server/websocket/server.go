@@ -1,13 +1,13 @@
 package websocket
 
 import (
-	"MessagesService/internal/middleware"
 	"context"
 	"errors"
 	"net"
 	"net/http"
 
 	"MessagesService/config"
+	"MessagesService/internal/middleware"
 	"MessagesService/internal/models/interfaces"
 
 	"github.com/gorilla/mux"
