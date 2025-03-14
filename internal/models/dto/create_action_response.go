@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type CreateAction struct {
+type CreateActionResponse struct {
 	Id        uuid.UUID `json:"id"`
 	CreatedAt time.Time `json:"created_at"`
 }

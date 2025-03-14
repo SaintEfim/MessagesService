@@ -34,7 +34,7 @@ func NewController(logger *zap.Logger, cfg *config.Config, chatClient interfaces
 	}
 }
 
-func (c *Controller) SendMessage(ctx context.Context, req *dto.SendMessage) (*dto.CreateAction, error) {
+func (c *Controller) SendMessage(ctx context.Context, req *dto.SendMessageRequest) (*dto.CreateActionResponse, error) {
 	validate := validator.New()
 	if err := validate.Struct(req); err != nil {
 		return nil, err
@@ -48,7 +48,7 @@ func (c *Controller) SendMessage(ctx context.Context, req *dto.SendMessage) (*dt
 	return res, nil
 }
 
-func (c *Controller) handleSendMessage(ctx context.Context, req *dto.SendMessage) (*dto.CreateAction, error) {
+func (c *Controller) handleSendMessage(ctx context.Context, req *dto.SendMessageRequest) (*dto.CreateActionResponse, error) {
 	resChatClient, err := c.chatClient.CreateMessage(ctx, &chat.MessageCreateRequest{
 		ChatId:     req.ChatId.String(),
 		SenderId:   req.SenderId.String(),
@@ -75,7 +75,7 @@ func (c *Controller) handleSendMessage(ctx context.Context, req *dto.SendMessage
 	c.mu.Unlock()
 
 	if exists {
-		if err := receiver.TransferData(&dto.Messages{
+		if err := receiver.TransferData(&dto.WsMessages{
 			Text:     req.Text,
 			CreateAt: createdAt,
 		}); err != nil {
@@ -86,13 +86,13 @@ func (c *Controller) handleSendMessage(ctx context.Context, req *dto.SendMessage
 		}
 	}
 
-	return &dto.CreateAction{
+	return &dto.CreateActionResponse{
 		Id:        id,
 		CreatedAt: createdAt,
 	}, nil
 }
 
-func (c *Controller) Connect(ctx context.Context, client *dto.ConnectClient, conn interfaces.Transfer) error {
+func (c *Controller) Connect(ctx context.Context, client *dto.ConnectClientRequest, conn interfaces.Transfer) error {
 	validate := validator.New()
 	if err := validate.Struct(client); err != nil {
 		return err

@@ -43,7 +43,7 @@ func (h *Handler) ConfigureRoutes(r *mux.Router) {
 func (h *Handler) SendMessage(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	request := &dto.SendMessage{}
+	request := &dto.SendMessageRequest{}
 	if err := json.NewDecoder(r.Body).Decode(request); err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		h.logger.Error("Error decoding request", zap.Error(err))
@@ -80,7 +80,7 @@ func (h *Handler) Connect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	clientModel := &dto.ConnectClient{}
+	clientModel := &dto.ConnectClientRequest{}
 	if err := json.Unmarshal(req, clientModel); err != nil {
 		h.handleError(conn, "Invalid JSON format", err)
 		h.logger.Error("Error unmarshalling message", zap.Error(err))

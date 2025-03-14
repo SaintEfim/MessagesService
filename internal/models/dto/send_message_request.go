@@ -2,7 +2,7 @@ package dto
 
 import "github.com/google/uuid"
 
-type SendMessage struct {
+type SendMessageRequest struct {
 	ChatId     uuid.UUID `json:"chat_id"`
 	SenderId   uuid.UUID `json:"sender_id" validate:"required"`
 	ReceiverId uuid.UUID `json:"receiver_id" validate:"required"`
