@@ -36,8 +36,8 @@ func NewHandler(
 }
 
 func (h *Handler) ConfigureRoutes(r *mux.Router) {
-	r.HandleFunc("/api/v1/message", h.SendMessage).Methods("POST")
-	r.HandleFunc("/api/v1/message/connect", h.Connect)
+	r.HandleFunc("/api/v1/messages", h.SendMessage).Methods("POST")
+	r.HandleFunc("/api/v1/messages/connect", h.Connect)
 	r.Methods("OPTIONS").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
