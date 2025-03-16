@@ -97,13 +97,13 @@ func (h *Handler) Connect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_ = conn.WriteMessage(websocket.TextMessage, []byte("Success connect!"))
+	_ = conn.WriteJSON(&dto.ConnectClientResponse{Content: "Success connect!"})
 }
 
 func (h *Handler) handleError(conn *websocket.Conn, message string, err error) {
 	h.logger.Error(message, zap.Error(err))
 	if conn != nil {
-		_ = conn.WriteMessage(websocket.TextMessage, []byte(message+": "+err.Error()))
+		_ = conn.WriteJSON(&dto.ConnectClientResponse{Error: message + ": " + err.Error()})
 		h.logger.Warn("Error sending message", zap.Error(err))
 	}
 }
