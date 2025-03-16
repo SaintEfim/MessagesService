@@ -76,8 +76,10 @@ func (c *Controller) handleSendMessage(ctx context.Context, req *dto.SendMessage
 
 	if exists {
 		if err := receiver.TransferData(&dto.WsMessages{
-			Text:     req.Text,
-			CreateAt: createdAt,
+			SenderId:   req.SenderId,
+			ReceiverId: req.ReceiverId,
+			Text:       req.Text,
+			CreateAt:   createdAt,
 		}); err != nil {
 			c.mu.Lock()
 			delete(c.clients, req.ReceiverId)
