@@ -7,8 +7,9 @@ import (
 )
 
 type WsMessages struct {
-	SenderId   uuid.UUID `json:"senderId" validate:"required"`
-	ReceiverId uuid.UUID `json:"receiverId" validate:"required"`
+	ChatId     uuid.UUID `json:"chat_id"`
+	SenderId   uuid.UUID `json:"senderId"`
+	ReceiverId uuid.UUID `json:"receiverId"`
 	Text       string    `json:"text"`
 	CreateAt   time.Time `json:"createAt"`
 }

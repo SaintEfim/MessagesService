@@ -76,6 +76,7 @@ func (c *Controller) handleSendMessage(ctx context.Context, req *dto.SendMessage
 
 	if exists {
 		if err := receiver.TransferData(&dto.WsMessages{
+			ChatId:     req.ChatId,
 			SenderId:   req.SenderId,
 			ReceiverId: req.ReceiverId,
 			Text:       req.Text,
